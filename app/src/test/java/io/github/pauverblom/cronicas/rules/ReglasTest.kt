@@ -57,6 +57,15 @@ class ProgresionTest {
     }
 
     @Test
+    fun armonicoDeHuesoSubeComoMagoYAtacaComoLadron() {
+        val a = Clases.porId("armonico_hueso")!!
+        assertEquals(Clases.mago.xpParaNivel(5), a.xpParaNivel(5))
+        assertEquals(Clases.ladron.baEnNivel(9), a.baEnNivel(9))
+        assertEquals(6, a.dado)
+        assertEquals(Atributo.CAR, a.principal)
+    }
+
+    @Test
     fun xpMulticlaseSumaMitadDeLaSecundaria() {
         // Guerrero 2001 + mago 2601 / 2 = 3301
         assertEquals(3301, Progresion.xpParaNivel(Clases.guerrero, Clases.mago, 2))

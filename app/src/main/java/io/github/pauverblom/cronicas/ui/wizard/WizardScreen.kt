@@ -351,6 +351,7 @@ private fun PasoClase(s: WizardState, vm: WizardViewModel) {
         DatoTarjeta("Alineamiento:", c.alineamiento)
         if (c.tablaConjuros != null) DatoTarjeta("Magia:", if (c.tablaConjuros == TablaConjuros.DIVINA) "conjuros divinos" else "conjuros arcanos")
         DatoTarjeta("Habilidades:", c.habilidades.filter { it.nivel == 1 }.joinToString { it.nombre })
+        c.fuente?.let { DatoTarjeta("Fuente:", it) }
     }
     if (s.claseId == PERSONALIZADA) {
         OutlinedTextField(s.claseNombre, { v -> vm.editar { it.copy(claseNombre = v) } }, label = { Text("Nombre de la clase") }, singleLine = true, modifier = Modifier.fillMaxWidth())

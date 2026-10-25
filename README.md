@@ -8,7 +8,8 @@ table; the app keeps the sheet and fills in everything the rules derive.
 - **Characters:** home screen of portrait cards; step-by-step creation wizard with illustrated carousels from the rulebook (name and portrait, species, class with
   optional multiclass, 3d6 scores and primaries, HP, alignment and deity, starting gold); export and import a
   character (portrait included) as a `.cronicas.json` file.
-- **Rules, auto-filled and editable:** the 13 classes and 8 species of the rulebook (plus custom ones) give hit die,
+- **Rules, auto-filled and editable:** the 13 classes and 8 species of the rulebook, the Armónico de Hueso from the
+  module *Agitando Pozasdemugre* (B19), plus custom ones, give hit die,
   BA by level, XP thresholds, class and species abilities, species modifiers, movement and languages. Derived values
   can be fixed by hand; a pencil marks overridden values.
 - **Resumen:** HP (±1), CA with breakdown, BA, hit die, movement, attacks per weapon (`BA +X · 1d8+FUE`, melee,
@@ -125,11 +126,12 @@ app/src/main/java/io/github/pauverblom/cronicas/
 python3 scripts/extract_spells.py LORE/Cronicasdelamarca.pdf app/src/main/assets/conjuros.json
 ```
 
-The class, species and equipment illustrations in `app/src/main/assets/ilustraciones/` come from the same PDF
-(armour, shields and helmets are cut out of their labelled plates; other items show their category plate):
+The class, species and equipment illustrations in `app/src/main/assets/ilustraciones/` come from the rulebook and from
+the red box (*Aventuras en la Marca del Este*, `LORE/caja_roja.pdf`). Each catalog item gets its own picture, cut out of
+the equipment plates along its own strokes; items the books don't draw fall back to their category plate:
 
 ```bash
-python3 scripts/extract_ilustraciones.py LORE/Cronicasdelamarca.pdf app/src/main/assets/ilustraciones
+python3 scripts/extract_ilustraciones.py LORE/Cronicasdelamarca.pdf LORE/caja_roja.pdf app/src/main/assets/ilustraciones
 ```
 
 Rules tests live in `app/src/test` (`./gradlew testDebugUnitTest`).

@@ -45,7 +45,9 @@ data class ClaseDef(
     /** Lista de conjuros del reglamento que usa: "clerigo", "druida", "ilusionista" o "mago". */
     val listaConjuros: String? = null,
     /** Característica que da conjuros adicionales. */
-    val atributoConjuros: Atributo? = null
+    val atributoConjuros: Atributo? = null,
+    /** Libro o módulo de donde sale la clase, si no es el reglamento básico. */
+    val fuente: String? = null
 ) {
     fun baEnNivel(nivel: Int): Int = ba[nivel.coerceIn(1, 12) - 1]
 
@@ -292,8 +294,37 @@ object Clases {
         )
     )
 
+    /**
+     * Clase del módulo B19 «Agitando Pozasdemugre» (anexo I), escrito para Aventuras en la Marca del Este.
+     * Adaptación a Crónicas: sube de nivel como mago, BA y armaduras como ladrón; su requisito de CAR 9
+     * se toma como característica principal. Las salvaciones «como mago» no aplican (aquí son por característica).
+     */
+    val armonicoHueso = ClaseDef(
+        id = "armonico_hueso", nombre = "Armónico de Hueso", principal = CAR,
+        descripcion = "Artistas del pueblo de Pozasdemugre que unen lo lúgubre y lo bello del pantano en armonías hipnóticas. " +
+            "Una suerte de bardo cuya música deleita a quienes moran más allá de la muerte.",
+        dado = 6, pgFijos = 2, alineamiento = "Cualquiera",
+        xp = mago.xp, xpTras12 = mago.xpTras12,
+        ba = BA_PICARO, armaduras = CUEROS, oroInicial = "3d4 × 10 mo (como el ladrón)",
+        habilidades = listOf(
+            HabilidadDef("Mutación del pantano", "Tira 1d6: 1 tercer brazo; 2 antenas receptoras y ojos compuestos; " +
+                "3 costillas articuladas que mueve a voluntad; 4 articulaciones que rotan por completo; " +
+                "5 tres lenguas retráctiles y prensiles; 6 otra cara en la mejilla (con la que puede conversar o cantar a dos voces). " +
+                "Edita esta habilidad para anotar el resultado."),
+            HabilidadDef("Belleza lúgubre", "Hace destacar la belleza de cualquier cosa en cualquier situación, por horrible que sea."),
+            HabilidadDef("Susurros de la muerte", "Tirada de SAB o INT con la dificultad que fije el Narrador: conoce las desgracias " +
+                "más recientes o importantes de la zona (y sus causas, si el Narrador lo permite).", atributo = SAB),
+            HabilidadDef("Lengua lúgubre", "Lee y entiende las lenguas de los no muertos y de las civilizaciones desaparecidas. " +
+                "Puede interpelar de forma sencilla a los cadáveres que encuentre."),
+            HabilidadDef("Usar pergaminos de magia", "Usa pergaminos de cualquier escuela con 1d20 sin modificador contra la dificultad " +
+                "del Narrador. Si falla, el pergamino se hace polvo y se interrumpe el descanso de los muertos de la zona.")
+        ),
+        fuente = "Agitando Pozasdemugre (B19)"
+    )
+
     val todas: List<ClaseDef> = listOf(
-        asesino, barbaro, bardo, caballero, clerigo, druida, explorador, guerrero, ilusionista, ladron, mago, mistico, paladin
+        asesino, barbaro, bardo, caballero, clerigo, druida, explorador, guerrero, ilusionista, ladron, mago, mistico, paladin,
+        armonicoHueso
     )
 
     fun porId(id: String?): ClaseDef? = todas.firstOrNull { it.id == id }
