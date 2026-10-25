@@ -32,6 +32,7 @@ class Repository(private val db: AppDatabase) {
     // ── Armas ──
     fun armas(pid: Long): Flow<List<Arma>> = db.armaDao().getByPersonaje(pid)
     suspend fun insertArma(a: Arma): Long = db.armaDao().insert(a)
+    suspend fun deleteArma(a: Arma) = db.armaDao().delete(a)
 
     // ── Conjuros ──
     fun allConjuros(): Flow<List<Conjuro>> = db.conjuroDao().getAll()

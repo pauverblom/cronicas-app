@@ -25,23 +25,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -73,7 +67,6 @@ import io.github.pauverblom.cronicas.ui.theme.ArcanePurple
 import io.github.pauverblom.cronicas.ui.theme.ForestGreen
 import io.github.pauverblom.cronicas.ui.theme.GoldAccent
 import io.github.pauverblom.cronicas.ui.theme.GoldDim
-import io.github.pauverblom.cronicas.ui.theme.GoldLight
 import io.github.pauverblom.cronicas.ui.theme.HpAmber
 import io.github.pauverblom.cronicas.ui.theme.HpGrey
 import io.github.pauverblom.cronicas.ui.theme.HpNormal
@@ -84,11 +77,10 @@ import io.github.pauverblom.cronicas.ui.theme.SilverDim
 import io.github.pauverblom.cronicas.ui.theme.SilverText
 
 @Composable
-fun MesaScreen(viewModel: MainViewModel) {
+fun MesaScreen(viewModel: MainViewModel, onEditCharacter: () -> Unit) {
     val state by viewModel.uiState.collectAsState()
     val combate = state.combate
     val caract = state.caracteristicas
-    var showDamageDialog by remember { mutableStateOf(false) }
     var saveRollResult by remember { mutableStateOf<DiceRollResult?>(null) }
 
     if (state.loading) {
@@ -118,9 +110,9 @@ fun MesaScreen(viewModel: MainViewModel) {
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     state.personaje?.let {
-                        CharacterHeader(it.nombre, it.clase, it.especie, it.nivel)
+                        CharacterHeader(it.nombre, it.clase, it.especie, it.nivel, onEdit = onEditCharacter)
                     }
-                    HpBlock(combate, viewModel, onDamageClick = { showDamageDialog = true })
+                    HpBlock(combate, viewModel)
                     if (caract != null) {
                         AbilityScoresBlock(caract, viewModel)
                     }
@@ -154,9 +146,9 @@ fun MesaScreen(viewModel: MainViewModel) {
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 state.personaje?.let {
-                    CharacterHeader(it.nombre, it.clase, it.especie, it.nivel)
+                    CharacterHeader(it.nombre, it.clase, it.especie, it.nivel, onEdit = onEditCharacter)
                 }
-                HpBlock(combate, viewModel, onDamageClick = { showDamageDialog = true })
+                HpBlock(combate, viewModel)
                 CombatStatsBlock(combate, viewModel)
                 if (caract != null) {
                     AbilityScoresBlock(caract, viewModel)
@@ -206,33 +198,35 @@ fun MesaScreen(viewModel: MainViewModel) {
             containerColor = ParchmentSurface
         )
     }
-
-    if (showDamageDialog) {
-        DamageDialog(
-            onDismiss = { showDamageDialog = false },
-            onApply = { amount, isDamage ->
-                if (isDamage) viewModel.changePg(-amount) else viewModel.changePg(amount)
-                showDamageDialog = false
-            }
-        )
-    }
 }
 
 // ── Cabecera ──
 
 @Composable
-fun CharacterHeader(nombre: String, clase: String, especie: String, nivel: Int) {
+fun CharacterHeader(nombre: String, clase: String, especie: String, nivel: Int, onEdit: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text(
-            nombre,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold,
-            color = GoldAccent,
-            letterSpacing = 2.sp
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                nombre,
+                modifier = Modifier.weight(1f, fill = false),
+                textAlign = TextAlign.Center,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = GoldAccent,
+                letterSpacing = 2.sp
+            )
+            IconButton(onClick = onEdit, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = "Editar personaje",
+                    modifier = Modifier.size(18.dp),
+                    tint = GoldDim
+                )
+            }
+        }
         Text(
             "$clase  ·  $especie  ·  Nivel $nivel",
             style = MaterialTheme.typography.bodyMedium,
@@ -244,7 +238,7 @@ fun CharacterHeader(nombre: String, clase: String, especie: String, nivel: Int) 
 // ── Puntos de golpe ──
 
 @Composable
-fun HpBlock(combate: EstadoCombate, viewModel: MainViewModel, onDamageClick: () -> Unit) {
+fun HpBlock(combate: EstadoCombate, viewModel: MainViewModel) {
     val hpColorEnum = Combat.hpColor(combate.pgActuales, combate.pgMaximos)
     val targetColor = when (hpColorEnum) {
         Combat.HpColor.NORMAL -> HpNormal
@@ -330,21 +324,7 @@ fun HpBlock(combate: EstadoCombate, viewModel: MainViewModel, onDamageClick: () 
                     Text("-1", color = HpRed.copy(alpha = if (canLose) 1f else 0.35f), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
 
-                Button(
-                    onClick = onDamageClick,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = GoldDim.copy(alpha = 0.3f),
-                        contentColor = GoldLight
-                    )
-                ) {
-                    Icon(Icons.Default.FlashOn, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Daño / Curación", fontSize = 14.sp)
-                }
+                Spacer(Modifier.weight(1f))
 
                 val canHeal = combate.pgActuales < combate.pgMaximos
                 OutlinedButton(
@@ -796,65 +776,3 @@ fun EffectsBlock(efectos: List<EfectoActivo>) {
     }
 }
 
-// ── Diálogo de daño / curación ──
-
-@Composable
-fun DamageDialog(onDismiss: () -> Unit, onApply: (amount: Int, isDamage: Boolean) -> Unit) {
-    var text by remember { mutableStateOf("") }
-    var isDamage by remember { mutableStateOf(true) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Daño / Curación", color = GoldAccent, fontWeight = FontWeight.Bold) },
-        text = {
-            Column {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = isDamage,
-                        onClick = { isDamage = true },
-                        label = { Text("Daño") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = HpRed.copy(alpha = 0.2f),
-                            selectedLabelColor = HpRed
-                        )
-                    )
-                    FilterChip(
-                        selected = !isDamage,
-                        onClick = { isDamage = false },
-                        label = { Text("Curación") },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = HpNormal.copy(alpha = 0.2f),
-                            selectedLabelColor = HpNormal
-                        )
-                    )
-                }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it.filter { c -> c.isDigit() } },
-                    label = { Text("Cantidad") },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        cursorColor = GoldAccent,
-                        focusedBorderColor = GoldAccent
-                    )
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val amount = text.toIntOrNull() ?: 0
-                if (amount > 0) onApply(amount, isDamage)
-            }) {
-                Text("Aplicar", color = GoldAccent)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancelar", color = SilverDim)
-            }
-        },
-        shape = RoundedCornerShape(16.dp),
-        containerColor = ParchmentSurface
-    )
-}

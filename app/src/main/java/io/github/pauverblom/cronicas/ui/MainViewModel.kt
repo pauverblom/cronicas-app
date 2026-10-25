@@ -51,6 +51,22 @@ data class DiceRollResult(
     val total: Int
 )
 
+/** Datos editables de un personaje: los del diálogo de crear/editar personaje. */
+data class CharacterForm(
+    val nombre: String = "",
+    val clase: String = "",
+    val especie: String = "",
+    val nivel: Int = 1,
+    val fue: Int = 10,
+    val des: Int = 10,
+    val con: Int = 10,
+    val int_: Int = 10,
+    val sab: Int = 10,
+    val car: Int = 10,
+    val pgMax: Int = 4,
+    val dadoGolpe: String = "d4"
+)
+
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app = application as CronicasApp
@@ -313,6 +329,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         return result
     }
 
+    fun addArma(arma: Arma) {
+        viewModelScope.launch {
+            repo.insertArma(arma.copy(id = 0, personajeId = pid))
+        }
+    }
+
+    fun deleteArma(arma: Arma) {
+        viewModelScope.launch {
+            repo.deleteArma(arma)
+        }
+    }
+
     fun rollDamage(arma: Arma): DiceRollResult? = rollDice(arma.formulaDano)
 
     // ── Efectos activos ──
@@ -460,46 +488,79 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit().putLong(KEY_SELECTED_PERSONAJE, newPid).apply()
     }
 
-    fun createCharacter(
-        nombre: String,
-        clase: String,
-        especie: String,
-        nivel: Int,
-        fue: Int,
-        des: Int,
-        con: Int,
-        int_: Int,
-        sab: Int,
-        car: Int,
-        pgMax: Int,
-        dadoGolpe: String
-    ) {
+    fun createCharacter(form: CharacterForm) {
         viewModelScope.launch {
             val newPid = repo.insertPersonaje(
-                Personaje(nombre = nombre, clase = clase, especie = especie, nivel = nivel)
+                Personaje(nombre = form.nombre, clase = form.clase, especie = form.especie, nivel = form.nivel)
             )
             repo.upsertCaracteristicas(
                 Caracteristicas(
                     personajeId = newPid,
-                    fue = fue,
-                    des = des,
-                    con = con,
-                    int_ = int_,
-                    sab = sab,
-                    car = car
+                    fue = form.fue,
+                    des = form.des,
+                    con = form.con,
+                    int_ = form.int_,
+                    sab = form.sab,
+                    car = form.car
                 )
             )
             repo.upsertEstadoCombate(
                 EstadoCombate(
                     personajeId = newPid,
-                    pgActuales = pgMax,
-                    pgMaximos = pgMax,
-                    dadoGolpe = dadoGolpe
+                    pgActuales = form.pgMax,
+                    pgMaximos = form.pgMax,
+                    dadoGolpe = form.dadoGolpe
                 )
             )
             repo.upsertTesoro(Tesoro(personajeId = newPid))
             selectCharacter(newPid)
-            showSnackbar("$nombre creado")
+            showSnackbar("${form.nombre} creado")
+        }
+    }
+
+    /** Valores actuales del personaje seleccionado, para rellenar el diálogo de edición. */
+    fun currentCharacterForm(): CharacterForm? {
+        val state = _uiState.value
+        val p = state.personaje ?: return null
+        val c = state.caracteristicas
+        val ec = state.combate
+        val defaults = CharacterForm()
+        return CharacterForm(
+            nombre = p.nombre,
+            clase = p.clase,
+            especie = p.especie,
+            nivel = p.nivel,
+            fue = c?.fue ?: defaults.fue,
+            des = c?.des ?: defaults.des,
+            con = c?.con ?: defaults.con,
+            int_ = c?.int_ ?: defaults.int_,
+            sab = c?.sab ?: defaults.sab,
+            car = c?.car ?: defaults.car,
+            pgMax = ec?.pgMaximos ?: defaults.pgMax,
+            dadoGolpe = ec?.dadoGolpe ?: defaults.dadoGolpe
+        )
+    }
+
+    /** Edita el personaje seleccionado, conservando el resto de sus datos (PG actuales, CA, etc.). */
+    fun updateCharacter(form: CharacterForm) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val p = state.personaje ?: return@launch
+            repo.updatePersonaje(
+                p.copy(nombre = form.nombre, clase = form.clase, especie = form.especie, nivel = form.nivel)
+            )
+            val c = state.caracteristicas ?: Caracteristicas(personajeId = p.id)
+            repo.upsertCaracteristicas(
+                c.copy(fue = form.fue, des = form.des, con = form.con, int_ = form.int_, sab = form.sab, car = form.car)
+            )
+            val ec = state.combate ?: EstadoCombate(personajeId = p.id, pgActuales = form.pgMax)
+            repo.upsertEstadoCombate(
+                ec.copy(
+                    pgMaximos = form.pgMax,
+                    pgActuales = ec.pgActuales.coerceIn(0, form.pgMax.coerceAtLeast(0)),
+                    dadoGolpe = form.dadoGolpe
+                )
+            )
         }
     }
 
@@ -512,13 +573,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun deleteCharacter(personaje: Personaje) {
         viewModelScope.launch {
             val allPjs = _uiState.value.allPersonajes
-            if (allPjs.size <= 1) {
-                showSnackbar("No puedes eliminar el único personaje")
-                return@launch
-            }
             repo.deletePersonaje(personaje)
-            val remaining = allPjs.filter { it.id != personaje.id }
-            selectCharacter(remaining.first().id)
+            // Si era el seleccionado, pasa al siguiente. Sin personajes, la app muestra la pantalla de bienvenida.
+            if (personaje.id == pid) {
+                allPjs.firstOrNull { it.id != personaje.id }?.let { selectCharacter(it.id) }
+            }
             showSnackbar("${personaje.nombre} eliminado")
         }
     }

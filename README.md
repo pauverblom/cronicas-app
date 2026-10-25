@@ -83,14 +83,15 @@ Pull requests and pushes to `main` run `.github/workflows/ci.yml`, which only ch
 
 ```
 app/src/main/java/io/github/pauverblom/cronicas/
-├── CronicasApp.kt          Application: DB/repository singletons, seeds initial data
+├── CronicasApp.kt          Application: DB/repository singletons, seeds the spell catalog on first launch
 ├── MainActivity.kt
-├── data/                   Room entities, DAOs, database, repository, seed data, spell catalog (160 spells)
+├── data/                   Room entities, DAOs, database, repository, spell catalog (160 spells),
+│                           weapon catalog (WeaponCatalog.kt: add entries there)
 ├── rules/                  Game rules: modifiers, dice, combat, encumbrance, spell slots
 ├── undo/                   Undo stack (serialized payloads stored in the `accion_undo` table)
 └── ui/
     ├── MainViewModel.kt
-    ├── navigation/         Scaffold, bottom bar, character picker, new-character dialog
+    ├── navigation/         Scaffold, bottom bar, character picker, create/edit character dialog
     ├── mesa/               Character sheet (HP, stats, saving throws, effects)
     ├── conjuros/           Prepared spells, grimoire, catalog, CSV import, long rest
     ├── combate/            Weapons, round tracker, timed effects, damage

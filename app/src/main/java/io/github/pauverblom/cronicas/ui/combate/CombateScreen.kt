@@ -57,6 +57,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.pauverblom.cronicas.data.Arma
 import io.github.pauverblom.cronicas.data.EfectoActivo
+import io.github.pauverblom.cronicas.data.WeaponCatalog
+import io.github.pauverblom.cronicas.rules.Dice
 import io.github.pauverblom.cronicas.ui.DiceRollResult
 import io.github.pauverblom.cronicas.ui.MainViewModel
 import io.github.pauverblom.cronicas.ui.theme.ArcaneBlue
@@ -78,6 +80,7 @@ fun CombateScreen(viewModel: MainViewModel) {
     val combate = state.combate
     var attackResult by remember { mutableStateOf<DiceRollResult?>(null) }
     var showAddEffect by remember { mutableStateOf(false) }
+    var showAddWeapon by remember { mutableStateOf(false) }
 
     if (state.loading) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -103,7 +106,7 @@ fun CombateScreen(viewModel: MainViewModel) {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    WeaponsBlock(state.armas, viewModel, onResult = { attackResult = it })
+                    WeaponsBlock(state.armas, viewModel, onResult = { attackResult = it }, onAdd = { showAddWeapon = true })
                     RoundTrackerBlock(viewModel)
                     Spacer(Modifier.height(60.dp))
                 }
@@ -126,7 +129,7 @@ fun CombateScreen(viewModel: MainViewModel) {
                     .padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                WeaponsBlock(state.armas, viewModel, onResult = { attackResult = it })
+                WeaponsBlock(state.armas, viewModel, onResult = { attackResult = it }, onAdd = { showAddWeapon = true })
                 RoundTrackerBlock(viewModel)
                 EffectsManagerBlock(state.efectos, viewModel, onAdd = { showAddEffect = true })
                 AttenuatedDamageBlock(combate.danoAtenuado, viewModel)
@@ -167,6 +170,16 @@ fun CombateScreen(viewModel: MainViewModel) {
         )
     }
 
+    if (showAddWeapon) {
+        AddWeaponDialog(
+            onDismiss = { showAddWeapon = false },
+            onAdd = { arma ->
+                viewModel.addArma(arma)
+                showAddWeapon = false
+            }
+        )
+    }
+
     if (showAddEffect) {
         AddEffectDialog(
             onDismiss = { showAddEffect = false },
@@ -181,7 +194,12 @@ fun CombateScreen(viewModel: MainViewModel) {
 // ── Armas ──
 
 @Composable
-fun WeaponsBlock(armas: List<Arma>, viewModel: MainViewModel, onResult: (DiceRollResult) -> Unit) {
+fun WeaponsBlock(
+    armas: List<Arma>,
+    viewModel: MainViewModel,
+    onResult: (DiceRollResult) -> Unit,
+    onAdd: () -> Unit
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -189,16 +207,27 @@ fun WeaponsBlock(armas: List<Arma>, viewModel: MainViewModel, onResult: (DiceRol
         border = BorderStroke(1.dp, GoldDim.copy(alpha = 0.3f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                "ARMAS",
-                style = MaterialTheme.typography.labelMedium,
-                color = GoldDim,
-                letterSpacing = 3.sp
-            )
-            Spacer(Modifier.height(10.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "ARMAS",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = GoldDim,
+                    letterSpacing = 3.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                IconButton(onClick = onAdd, modifier = Modifier.size(32.dp)) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Añadir arma",
+                        modifier = Modifier.size(20.dp),
+                        tint = GoldAccent
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
 
             if (armas.isEmpty()) {
-                Text("Sin armas equipadas", color = SilverDim, fontSize = 14.sp)
+                Text("Sin armas. Pulsa + para añadir una.", color = SilverDim, fontSize = 14.sp)
             }
 
             armas.forEach { arma ->
@@ -235,6 +264,18 @@ fun WeaponsBlock(armas: List<Arma>, viewModel: MainViewModel, onResult: (DiceRol
                                     color = HpRed.copy(alpha = 0.8f),
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 14.sp
+                                )
+                            }
+                            Spacer(Modifier.width(4.dp))
+                            IconButton(
+                                onClick = { viewModel.deleteArma(arma) },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Quitar arma",
+                                    modifier = Modifier.size(16.dp),
+                                    tint = SilverDim
                                 )
                             }
                         }
@@ -522,6 +563,170 @@ private fun AddEffectDialog(onDismiss: () -> Unit, onAdd: (nombre: String, unida
                 }
             }) {
                 Text("Añadir", color = GoldAccent)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = SilverDim)
+            }
+        },
+        shape = RoundedCornerShape(16.dp),
+        containerColor = ParchmentSurface
+    )
+}
+
+// ── Añadir arma ──
+
+/** Añadir un arma: del catálogo ([WeaponCatalog]) o personalizada. */
+@Composable
+private fun AddWeaponDialog(onDismiss: () -> Unit, onAdd: (Arma) -> Unit) {
+    var custom by remember { mutableStateOf(false) }
+    var nombre by remember { mutableStateOf("") }
+    var formulaDano by remember { mutableStateOf("1d6") }
+    var tipo by remember { mutableStateOf("cuerpo") }
+    var baExtra by remember { mutableStateOf("0") }
+    var ve by remember { mutableStateOf("0") }
+    var notas by remember { mutableStateOf("") }
+
+    val formulaOk = Dice.parse(formulaDano.trim())
+    val tfColors = OutlinedTextFieldDefaults.colors(
+        cursorColor = GoldAccent,
+        focusedBorderColor = GoldAccent,
+        focusedLabelColor = GoldAccent
+    )
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir arma", color = GoldAccent, fontWeight = FontWeight.Bold) },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(false to "Catálogo", true to "Personalizada").forEach { (isCustom, label) ->
+                        FilterChip(
+                            selected = custom == isCustom,
+                            onClick = { custom = isCustom },
+                            label = { Text(label) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = GoldAccent.copy(alpha = 0.2f),
+                                selectedLabelColor = GoldAccent
+                            )
+                        )
+                    }
+                }
+
+                if (!custom) {
+                    WeaponCatalog.armas.forEach { w ->
+                        Card(
+                            onClick = { onAdd(w.toArma(personajeId = 0)) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = ParchmentSurfaceVariant)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    if (w.tipo == "distancia") Icons.Default.GpsFixed else Icons.Default.Gavel,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                    tint = SilverDim
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(w.nombre, color = Parchment, fontWeight = FontWeight.SemiBold)
+                                    val detalles = listOfNotNull(
+                                        "VE ${w.ve}",
+                                        w.notas.takeIf { it.isNotBlank() }
+                                    ).joinToString(" · ")
+                                    Text(detalles, color = SilverDim, fontSize = 12.sp)
+                                }
+                                Text(w.formulaDano, color = HpRed.copy(alpha = 0.8f), fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = nombre,
+                        onValueChange = { nombre = it },
+                        label = { Text("Nombre *") },
+                        singleLine = true,
+                        colors = tfColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = formulaDano,
+                        onValueChange = { formulaDano = it },
+                        label = { Text("Daño (p. ej. 1d8+1)") },
+                        isError = !formulaOk,
+                        singleLine = true,
+                        colors = tfColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("cuerpo" to "Cuerpo a cuerpo", "distancia" to "A distancia").forEach { (key, label) ->
+                            FilterChip(
+                                selected = tipo == key,
+                                onClick = { tipo = key },
+                                label = { Text(label) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = GoldAccent.copy(alpha = 0.2f),
+                                    selectedLabelColor = GoldAccent
+                                )
+                            )
+                        }
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedTextField(
+                            value = baExtra,
+                            onValueChange = { v -> baExtra = v.filterIndexed { i, c -> c.isDigit() || (i == 0 && c == '-') } },
+                            label = { Text("BA extra") },
+                            singleLine = true,
+                            colors = tfColors,
+                            modifier = Modifier.weight(1f)
+                        )
+                        OutlinedTextField(
+                            value = ve,
+                            onValueChange = { v -> ve = v.filter { it.isDigit() } },
+                            label = { Text("VE") },
+                            singleLine = true,
+                            colors = tfColors,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    OutlinedTextField(
+                        value = notas,
+                        onValueChange = { notas = it },
+                        label = { Text("Notas") },
+                        colors = tfColors,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (custom) {
+                TextButton(
+                    onClick = {
+                        onAdd(
+                            Arma(
+                                personajeId = 0,
+                                nombre = nombre.trim(),
+                                baExtra = baExtra.toIntOrNull() ?: 0,
+                                formulaDano = formulaDano.trim(),
+                                tipo = tipo,
+                                notas = notas.trim(),
+                                ve = ve.toIntOrNull() ?: 0
+                            )
+                        )
+                    },
+                    enabled = nombre.isNotBlank() && formulaOk
+                ) {
+                    Text("Añadir", color = if (nombre.isNotBlank() && formulaOk) GoldAccent else SilverDim)
+                }
             }
         },
         dismissButton = {

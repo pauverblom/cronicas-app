@@ -1,7 +1,6 @@
 package io.github.pauverblom.cronicas.ui.navigation
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +19,11 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Casino
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Construction
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -38,6 +42,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,10 +54,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import io.github.pauverblom.cronicas.data.Personaje
 import io.github.pauverblom.cronicas.ui.MainViewModel
 import io.github.pauverblom.cronicas.ui.combate.CombateScreen
 import io.github.pauverblom.cronicas.ui.conjuros.ConjurosScreen
@@ -62,6 +69,7 @@ import io.github.pauverblom.cronicas.ui.mesa.MesaScreen
 import io.github.pauverblom.cronicas.ui.notas.NotasScreen
 import io.github.pauverblom.cronicas.ui.theme.GoldAccent
 import io.github.pauverblom.cronicas.ui.theme.GoldDim
+import io.github.pauverblom.cronicas.ui.theme.HpRed
 import io.github.pauverblom.cronicas.ui.theme.Parchment
 import io.github.pauverblom.cronicas.ui.theme.ParchmentDark
 import io.github.pauverblom.cronicas.ui.theme.ParchmentSurface
@@ -75,6 +83,8 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
     var showDice by remember { mutableStateOf(false) }
     var showCharMenu by remember { mutableStateOf(false) }
     var showNewChar by remember { mutableStateOf(false) }
+    var showEditChar by remember { mutableStateOf(false) }
+    var pendingDelete by remember { mutableStateOf<Personaje?>(null) }
     val state by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -123,7 +133,7 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    state.personaje?.nombre ?: "…",
+                                    state.personaje?.nombre ?: if (state.loading) "…" else "Sin personaje",
                                     color = GoldAccent,
                                     fontSize = 17.sp,
                                     fontWeight = FontWeight.Bold,
@@ -161,21 +171,19 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
                                                     Text(pj.clase, color = SilverDim, fontSize = 12.sp)
                                                 }
                                             }
-                                            if (state.allPersonajes.size > 1) {
-                                                IconButton(
-                                                    onClick = {
-                                                        showCharMenu = false
-                                                        viewModel.deleteCharacter(pj)
-                                                    },
-                                                    modifier = Modifier.size(28.dp)
-                                                ) {
-                                                    Icon(
-                                                        Icons.Default.Close,
-                                                        contentDescription = "Eliminar",
-                                                        modifier = Modifier.size(16.dp),
-                                                        tint = SilverDim.copy(alpha = 0.5f)
-                                                    )
-                                                }
+                                            IconButton(
+                                                onClick = {
+                                                    showCharMenu = false
+                                                    pendingDelete = pj
+                                                },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Close,
+                                                    contentDescription = "Eliminar",
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = SilverDim.copy(alpha = 0.5f)
+                                                )
                                             }
                                         }
                                     },
@@ -185,7 +193,29 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
                                     }
                                 )
                             }
-                            HorizontalDivider(color = GoldDim.copy(alpha = 0.2f))
+                            if (state.allPersonajes.isNotEmpty()) {
+                                HorizontalDivider(color = GoldDim.copy(alpha = 0.2f))
+                            }
+                            if (state.personaje != null) {
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                Icons.Default.Edit,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(18.dp),
+                                                tint = GoldAccent
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text("Editar personaje", color = GoldAccent, fontWeight = FontWeight.SemiBold)
+                                        }
+                                    },
+                                    onClick = {
+                                        showCharMenu = false
+                                        showEditChar = true
+                                    }
+                                )
+                            }
                             DropdownMenuItem(
                                 text = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -258,8 +288,10 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
         }
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
-            when (currentScreen) {
-                Screen.Mesa -> MesaScreen(viewModel)
+            if (!state.loading && state.allPersonajes.isEmpty()) {
+                NoCharacterScreen(onCreate = { showNewChar = true })
+            } else when (currentScreen) {
+                Screen.Mesa -> MesaScreen(viewModel, onEditCharacter = { showEditChar = true })
                 Screen.Conjuros -> ConjurosScreen(viewModel)
                 Screen.Combate -> CombateScreen(viewModel)
                 Screen.Equipo -> EquipoScreen(viewModel)
@@ -271,13 +303,93 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
             }
 
             if (showNewChar) {
-                NewCharacterDialog(
+                CharacterDialog(
+                    title = "Nuevo personaje",
+                    confirmLabel = "Crear",
                     onDismiss = { showNewChar = false },
-                    onCreate = { nombre, clase, especie, nivel, fue, des, con, int_, sab, car, pgMax, dadoGolpe ->
-                        viewModel.createCharacter(nombre, clase, especie, nivel, fue, des, con, int_, sab, car, pgMax, dadoGolpe)
+                    onConfirm = { form ->
+                        viewModel.createCharacter(form)
                         showNewChar = false
                     }
                 )
+            }
+
+            if (showEditChar) {
+                val initial = viewModel.currentCharacterForm()
+                if (initial == null) {
+                    showEditChar = false
+                } else {
+                    CharacterDialog(
+                        title = "Editar personaje",
+                        confirmLabel = "Guardar",
+                        initial = initial,
+                        onDismiss = { showEditChar = false },
+                        onConfirm = { form ->
+                            viewModel.updateCharacter(form)
+                            showEditChar = false
+                        }
+                    )
+                }
+            }
+
+            pendingDelete?.let { pj ->
+                AlertDialog(
+                    onDismissRequest = { pendingDelete = null },
+                    shape = RoundedCornerShape(16.dp),
+                    containerColor = ParchmentSurface,
+                    title = { Text("¿Eliminar a ${pj.nombre}?", color = GoldAccent, fontWeight = FontWeight.Bold) },
+                    text = { Text("Se borrarán su ficha, conjuros, equipo y notas. No se puede deshacer.", color = Parchment) },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            viewModel.deleteCharacter(pj)
+                            pendingDelete = null
+                        }) {
+                            Text("Eliminar", color = HpRed, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { pendingDelete = null }) {
+                            Text("Cancelar", color = SilverDim)
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+/** Pantalla de bienvenida cuando todavía no hay ningún personaje. */
+@Composable
+private fun NoCharacterScreen(onCreate: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Default.PersonAdd,
+                contentDescription = null,
+                modifier = Modifier.size(56.dp),
+                tint = GoldDim
+            )
+            Spacer(Modifier.height(12.dp))
+            Text("Aún no hay personajes", color = GoldAccent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Crea tu personaje para empezar a llevar su ficha.",
+                color = SilverDim,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(20.dp))
+            Button(
+                onClick = onCreate,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GoldAccent.copy(alpha = 0.2f),
+                    contentColor = GoldAccent
+                )
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Crear personaje", fontWeight = FontWeight.SemiBold)
             }
         }
     }

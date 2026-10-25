@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import io.github.pauverblom.cronicas.ui.CharacterForm
 import io.github.pauverblom.cronicas.ui.theme.GoldAccent
 import io.github.pauverblom.cronicas.ui.theme.GoldDim
 import io.github.pauverblom.cronicas.ui.theme.Parchment
@@ -39,36 +40,27 @@ import io.github.pauverblom.cronicas.ui.theme.ParchmentSurface
 import io.github.pauverblom.cronicas.ui.theme.ParchmentSurfaceVariant
 import io.github.pauverblom.cronicas.ui.theme.SilverDim
 
+/** Diálogo para crear un personaje o editar el seleccionado (rellenado con [initial]). */
 @Composable
-fun NewCharacterDialog(
+fun CharacterDialog(
+    title: String,
+    confirmLabel: String,
+    initial: CharacterForm = CharacterForm(),
     onDismiss: () -> Unit,
-    onCreate: (
-        nombre: String,
-        clase: String,
-        especie: String,
-        nivel: Int,
-        fue: Int,
-        des: Int,
-        con: Int,
-        int_: Int,
-        sab: Int,
-        car: Int,
-        pgMax: Int,
-        dadoGolpe: String
-    ) -> Unit
+    onConfirm: (CharacterForm) -> Unit
 ) {
-    var nombre by remember { mutableStateOf("") }
-    var clase by remember { mutableStateOf("") }
-    var especie by remember { mutableStateOf("") }
-    var nivel by remember { mutableStateOf("1") }
-    var fue by remember { mutableStateOf("10") }
-    var des by remember { mutableStateOf("10") }
-    var con by remember { mutableStateOf("10") }
-    var int_ by remember { mutableStateOf("10") }
-    var sab by remember { mutableStateOf("10") }
-    var car by remember { mutableStateOf("10") }
-    var pgMax by remember { mutableStateOf("4") }
-    var dadoGolpe by remember { mutableStateOf("d4") }
+    var nombre by remember { mutableStateOf(initial.nombre) }
+    var clase by remember { mutableStateOf(initial.clase) }
+    var especie by remember { mutableStateOf(initial.especie) }
+    var nivel by remember { mutableStateOf(initial.nivel.toString()) }
+    var fue by remember { mutableStateOf(initial.fue.toString()) }
+    var des by remember { mutableStateOf(initial.des.toString()) }
+    var con by remember { mutableStateOf(initial.con.toString()) }
+    var int_ by remember { mutableStateOf(initial.int_.toString()) }
+    var sab by remember { mutableStateOf(initial.sab.toString()) }
+    var car by remember { mutableStateOf(initial.car.toString()) }
+    var pgMax by remember { mutableStateOf(initial.pgMax.toString()) }
+    var dadoGolpe by remember { mutableStateOf(initial.dadoGolpe) }
     var dadoExpanded by remember { mutableStateOf(false) }
 
     val tfColors = OutlinedTextFieldDefaults.colors(
@@ -84,7 +76,7 @@ fun NewCharacterDialog(
         shape = RoundedCornerShape(16.dp),
         containerColor = ParchmentSurface,
         title = {
-            Text("Nuevo personaje", color = GoldAccent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = GoldAccent, fontSize = 20.sp, fontWeight = FontWeight.Bold)
         },
         text = {
             Column(
@@ -196,23 +188,25 @@ fun NewCharacterDialog(
         confirmButton = {
             TextButton(onClick = {
                 if (nombre.isNotBlank()) {
-                    onCreate(
-                        nombre.trim(),
-                        clase.trim(),
-                        especie.trim(),
-                        nivel.toIntOrNull() ?: 1,
-                        fue.toIntOrNull() ?: 10,
-                        des.toIntOrNull() ?: 10,
-                        con.toIntOrNull() ?: 10,
-                        int_.toIntOrNull() ?: 10,
-                        sab.toIntOrNull() ?: 10,
-                        car.toIntOrNull() ?: 10,
-                        pgMax.toIntOrNull() ?: 4,
-                        dadoGolpe
+                    onConfirm(
+                        CharacterForm(
+                            nombre = nombre.trim(),
+                            clase = clase.trim(),
+                            especie = especie.trim(),
+                            nivel = nivel.toIntOrNull() ?: initial.nivel,
+                            fue = fue.toIntOrNull() ?: initial.fue,
+                            des = des.toIntOrNull() ?: initial.des,
+                            con = con.toIntOrNull() ?: initial.con,
+                            int_ = int_.toIntOrNull() ?: initial.int_,
+                            sab = sab.toIntOrNull() ?: initial.sab,
+                            car = car.toIntOrNull() ?: initial.car,
+                            pgMax = pgMax.toIntOrNull() ?: initial.pgMax,
+                            dadoGolpe = dadoGolpe
+                        )
                     )
                 }
             }) {
-                Text("Crear", color = GoldAccent, fontWeight = FontWeight.Bold)
+                Text(confirmLabel, color = GoldAccent, fontWeight = FontWeight.Bold)
             }
         },
         dismissButton = {
