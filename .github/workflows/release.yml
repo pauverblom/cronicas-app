@@ -62,8 +62,11 @@ jobs:
           KS="$RUNNER_TEMP/release.jks"
           KEY_ALIAS="$(printf '%s' "$KEY_ALIAS" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
           KEY_PASSWORD="${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+          # Compare with `sha256sum` / `wc -c` of your local .jks to tell a mangled paste from a wrong password.
+          echo "Decoded keystore: $(wc -c < "$KS") bytes, sha256 $(sha256sum "$KS" | cut -d' ' -f1)"
           if ! keytool -list -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" > "$RUNNER_TEMP/keys.txt" 2>&1; then
-            echo "::error::Could not open the keystore: KEYSTORE_PASSWORD is wrong or KEYSTORE_BASE64 is not the .jks file."
+            grep -v "^Picked up" "$RUNNER_TEMP/keys.txt"
+            echo "::error::Could not open the keystore (see keytool's message above). 'password was incorrect' means KEYSTORE_PASSWORD is wrong; a format/IO error means KEYSTORE_BASE64 doesn't decode to your .jks (compare the size and sha256 above)."
             exit 1
           fi
           echo "Keys in the keystore:"

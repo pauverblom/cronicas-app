@@ -64,6 +64,19 @@ The signing key lives only in the repository secrets (`KEYSTORE_BASE64`, `KEYSTO
 the maintainer's offline backup. **If it is lost, existing installs can't be updated.** Everyone would have to
 uninstall (losing their data) and reinstall.
 
+To (re)set the secrets without copy-pasting, use the [GitHub CLI](https://cli.github.com/) (works in Termux:
+`pkg install gh`):
+
+```bash
+gh auth login
+base64 -w0 cronicas-release.jks | gh secret set KEYSTORE_BASE64 -R pauverblom/cronicas-app
+gh secret set KEYSTORE_PASSWORD -R pauverblom/cronicas-app   # prompts for the value
+gh secret set KEY_ALIAS -R pauverblom/cronicas-app --body cronicas
+```
+
+If a release fails at *Verify signing key*, its log prints the decoded keystore's size and sha256. Compare them with
+`wc -c cronicas-release.jks` and `sha256sum cronicas-release.jks`.
+
 Pull requests and pushes to `main` run `.github/workflows/ci.yml`, which only checks that the debug build compiles.
 
 ## Project layout
