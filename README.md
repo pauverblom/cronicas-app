@@ -1,6 +1,25 @@
 # Crónicas de la Marca
 
-An Android companion app for our role-playing sessions (character sheet, spells, combat, equipment, notes and dice).
+A digital character sheet for *Crónicas de la Marca del Este* (2022 rulebook). Dice are rolled with real dice at the
+table; the app keeps the sheet and fills in everything the rules derive.
+
+## Features
+
+- **Characters:** home screen of portrait cards; step-by-step creation wizard (name and portrait, species, class with
+  optional multiclass, 3d6 scores and primaries, HP, alignment and deity, starting gold); export and import a
+  character (portrait included) as a `.cronicas.json` file.
+- **Rules, auto-filled and editable:** the 13 classes and 8 species of the rulebook (plus custom ones) give hit die,
+  BA by level, XP thresholds, class and species abilities, species modifiers, movement and languages. Derived values
+  can be fixed by hand; a pencil marks overridden values.
+- **Resumen:** HP (±1), CA with breakdown, BA, hit die, movement, attacks per weapon (`BA +X · 1d8+FUE`, melee,
+  thrown and ranged), saves and checks as `bonus · ND 12/18`, conditions and rule warnings (forbidden weapons or armour,
+  alignment, load).
+- **Equipo:** full weapon, ammunition, armour, shield, helmet and gear catalog with prices (optionally paid from your
+  coins); containers with capacity; mounts and companions that carry load; load bands and their penalties.
+- **Magia:** spell slots from the class tables plus bonus spells; known and prepared spells with "used" checkboxes and
+  a rest button; catalog of the 371 rulebook spells for Clérigo, Druida, Ilusionista and Mago, CSV import and custom spells.
+- **Themes:** Pergamino oscuro, Pergamino claro, Material You, or *Desde retrato* (each sheet takes its colors from the
+  character's portrait), with system, light or dark mode.
 
 ## Origin of this source code
 
@@ -34,7 +53,7 @@ Requirements: Android Studio (Ladybug or newer) / JDK 17+, Android SDK 35.
 Or open the folder in Android Studio and press *Run*.
 
 Stack: Kotlin 2.1.0, AGP 8.7.3, Gradle 8.11.1, Jetpack Compose (BOM 2024.12.01, Material 3), Navigation Compose,
-Room 2.6.1 (KSP), kotlinx-serialization 1.7.3. `minSdk` 26, `targetSdk` 35.
+Room 2.6.1 (KSP), DataStore, kotlinx-serialization 1.7.3, Coil 3, MaterialKolor, Android Image Cropper. `minSdk` 26, `targetSdk` 35.
 
 > **Note:** the app id changed from `com.example.cronicasmarca` to `io.github.pauverblom.cronicas`, so this app
 > installs *next to* the original APK, not over it. Its data doesn't carry over. Uninstall the old one once you've moved over.
@@ -77,41 +96,42 @@ gh secret set KEY_ALIAS -R pauverblom/cronicas-app --body cronicas
 If a release fails at *Verify signing key*, its log prints the decoded keystore's size and sha256. Compare them with
 `wc -c cronicas-release.jks` and `sha256sum cronicas-release.jks`.
 
-Pull requests and pushes to `main` run `.github/workflows/ci.yml`, which only checks that the debug build compiles.
+Pull requests and pushes to `main` run `.github/workflows/ci.yml`, which runs the rules unit tests and builds the debug APK.
 
 ## Project layout
 
 ```
 app/src/main/java/io/github/pauverblom/cronicas/
-├── CronicasApp.kt          Application: DB/repository singletons, seeds the spell catalog on first launch
+├── CronicasApp.kt          Application: DB, repository and settings; seeds the spell catalog on first launch
 ├── MainActivity.kt
-├── data/                   Room entities, DAOs, database, repository, spell catalog (160 spells),
-│                           weapon catalog (WeaponCatalog.kt: add entries there)
-├── rules/                  Game rules: modifiers, dice, combat, encumbrance, spell slots
-├── undo/                   Undo stack (serialized payloads stored in the `accion_undo` table)
+├── data/                   Room entities and DAOs, repository, settings (DataStore), export/import (Backup.kt)
+├── rules/                  Rules engine: Hoja.kt computes the whole derived sheet; Reglas.kt has progression,
+│   │                       saves, load, spell slots and coins
+│   └── data/               Rulebook data: classes, species, alignments, item catalog
 └── ui/
-    ├── MainViewModel.kt
-    ├── navigation/         Scaffold, bottom bar, character picker, create/edit character dialog
-    ├── mesa/               Character sheet (HP, stats, saving throws, effects)
-    ├── conjuros/           Prepared spells, grimoire, catalog, CSV import, long rest
-    ├── combate/            Weapons, round tracker, timed effects, damage
-    ├── equipo/             Coins, items, gems, magic items, carry limit
-    ├── notas/              Notes
-    ├── dados/              Dice roller bottom sheet
-    └── theme/              Colors and typography
+    ├── home/               Character gallery
+    ├── wizard/             Creation wizard
+    ├── hoja/               Sheet tabs: Resumen, Personaje, Equipo, Magia, Notas
+    ├── ajustes/            Theme and mode
+    ├── foto/               Portrait picking, cropping and color extraction
+    ├── common/             Shared components
+    └── theme/              Color schemes and typography
 ```
 
-`app/src/main/assets/reglas.json` ships with the original APK but no code reads it.
+`app/src/main/assets/conjuros.json` is generated from the rulebook PDF with `scripts/extract_spells.py`
+(needs poppler's `pdftotext`):
 
-## Known issues (inherited from the original APK)
+```bash
+python3 scripts/extract_spells.py LORE/Cronicasdelamarca.pdf app/src/main/assets/conjuros.json
+```
 
-These issues are kept intentionally so the app behaves exactly like the original. Fix them as normal changes.
+Rules tests live in `app/src/test` (`./gradlew testDebugUnitTest`).
 
-- **Undo after casting a spell corrupts the prepared count.** `UndoManager` (marked `FIXME`) restores
-  `preparadoVeces` with the previous *gastadoVeces* value. It should restore `gastadoVeces`.
+## Known issues
+
 - The database uses `fallbackToDestructiveMigration()`. Changing an entity and bumping the version **wipes all data**.
-  Write a real `Migration` before changing the schema.
-- The `datastore-preferences` dependency is declared but unused.
+  Write a real `Migration` before changing the schema (version 4 deliberately discarded the old companion-app data).
+- Class ability descriptions are short summaries, not the rulebook text. Edit them on the sheet if you need more.
 
 ## Contributing
 
