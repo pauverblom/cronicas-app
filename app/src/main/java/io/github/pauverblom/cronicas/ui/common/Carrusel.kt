@@ -2,6 +2,7 @@ package io.github.pauverblom.cronicas.ui.common
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,8 +18,11 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HideImage
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,6 +32,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
@@ -35,26 +40,53 @@ import coil3.compose.AsyncImage
 /** Fondo de papel para las ilustraciones (son tinta sobre blanco), igual en tema claro y oscuro. */
 private val Papel = Color(0xFFFBF6EA)
 
-/** Ilustración del reglamento sobre fondo de papel; sin imagen muestra la inicial de [nombre]. */
+/**
+ * Ilustración del reglamento sobre fondo de papel. Si no hay imagen y se indica [archivoFaltante], muestra un
+ * aviso «MISSING PICTURE» con el archivo que falta; si no, la inicial de [nombre] (opciones personalizadas).
+ */
 @Composable
-fun Ilustracion(uri: String?, nombre: String, alto: Dp, modifier: Modifier = Modifier) {
+fun Ilustracion(uri: String?, nombre: String, alto: Dp, modifier: Modifier = Modifier, archivoFaltante: String? = null) {
+    val faltante = uri == null && archivoFaltante != null
     Box(
         modifier = modifier
             .fillMaxWidth()
             .height(alto)
             .clip(RoundedCornerShape(12.dp))
-            .background(if (uri != null) Papel else MaterialTheme.colorScheme.primaryContainer),
+            .background(
+                when {
+                    uri != null -> Papel
+                    faltante -> MaterialTheme.colorScheme.errorContainer
+                    else -> MaterialTheme.colorScheme.primaryContainer
+                }
+            )
+            .then(
+                if (faltante) Modifier.border(2.dp, MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp)) else Modifier
+            ),
         contentAlignment = Alignment.Center
     ) {
-        if (uri != null) {
-            AsyncImage(
+        when {
+            uri != null -> AsyncImage(
                 model = uri,
                 contentDescription = nombre,
                 contentScale = ContentScale.Fit,
                 modifier = Modifier.fillMaxWidth().height(alto).padding(8.dp)
             )
-        } else {
-            Text(
+            faltante -> Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
+                Icon(Icons.Default.HideImage, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(40.dp))
+                Text(
+                    "MISSING PICTURE",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                Text(
+                    "assets/ilustraciones/$archivoFaltante",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    textAlign = TextAlign.Center
+                )
+            }
+            else -> Text(
                 nombre.firstOrNull()?.uppercase() ?: "?",
                 style = MaterialTheme.typography.displayLarge,
                 color = MaterialTheme.colorScheme.onPrimaryContainer

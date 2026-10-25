@@ -397,7 +397,7 @@ private fun CatalogoSheet(
                     clave = { it.id },
                     modifier = Modifier.padding(bottom = 24.dp)
                 ) { a ->
-                    Ilustracion(Ilustraciones.articulo(a), a.nombre, 220.dp)
+                    Ilustracion(Ilustraciones.articulo(a), a.nombre, 220.dp, archivoFaltante = Ilustraciones.archivoArticulo(a))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(a.nombre, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
                         Text(Monedas.formato(a.precioMc), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)

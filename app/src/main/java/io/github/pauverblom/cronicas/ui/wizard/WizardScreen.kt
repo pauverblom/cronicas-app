@@ -317,7 +317,7 @@ private fun PasoEspecie(s: WizardState, vm: WizardViewModel) {
             Text("Una especie que no está en el reglamento. Sin modificadores automáticos: lo rellenas tú.", style = MaterialTheme.typography.bodyMedium)
             return@Carrusel
         }
-        Ilustracion(Ilustraciones.especie(e.id), e.nombre, 300.dp)
+        Ilustracion(Ilustraciones.especie(e.id), e.nombre, 300.dp, archivoFaltante = Ilustraciones.archivoEspecie(e.id))
         Text(e.nombre, style = MaterialTheme.typography.titleLarge)
         Text(e.descripcion, style = MaterialTheme.typography.bodyMedium)
         DatoTarjeta("Características:", e.mods.entries.joinToString(", ") { "${it.key.abrev} ${signo(it.value)}" }.ifBlank { "sin modificadores" })
@@ -343,7 +343,7 @@ private fun PasoClase(s: WizardState, vm: WizardViewModel) {
             Text("Una clase que no está en el reglamento. Sin cálculos automáticos: lo rellenas tú.", style = MaterialTheme.typography.bodyMedium)
             return@Carrusel
         }
-        Ilustracion(Ilustraciones.clase(c.id), c.nombre, 300.dp)
+        Ilustracion(Ilustraciones.clase(c.id), c.nombre, 300.dp, archivoFaltante = Ilustraciones.archivoClase(c.id))
         Text(c.nombre, style = MaterialTheme.typography.titleLarge)
         Text(c.descripcion, style = MaterialTheme.typography.bodyMedium)
         DatoTarjeta("Característica principal:", c.principal.nombre)

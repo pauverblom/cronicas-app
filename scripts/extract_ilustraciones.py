@@ -11,7 +11,7 @@ Necesita `pdfimages` (poppler) y Pillow. Las páginas son las del PDF, no las im
 - Objetos: un archivo objeto_<id de catálogo>.webp por artículo. Se sacan de las láminas de equipo de
   Crónicas (recortando cada dibujo por sus propios trazos, no por un rectángulo) y, donde Crónicas no lo
   dibuja suelto, de las ilustraciones rotuladas de la caja roja (Aventuras en la Marca del Este).
-- Láminas: lamina_<categoría>.webp, para los artículos sin dibujo propio.
+- Lo que ningún libro dibuja no se genera: la app muestra «MISSING PICTURE» con el nombre de archivo esperado.
 """
 import glob
 import os
@@ -26,9 +26,8 @@ CLASES = {
     "guerrero": 27, "ilusionista": 29, "ladron": 31, "mago": 32, "mistico": 34, "paladin": 36,
 }
 ESPECIES = {
+    # El libro no ilustra al semielfo
     "elfo": 39, "elfo_oscuro": 40, "enano": 41, "gnomo": 42, "mediano": 43, "humano": 44, "semiorco": 45,
-    # El libro no ilustra al semielfo: se usa la del elfo
-    "semielfo": 39,
 }
 
 # Láminas de Crónicas: (página, tamaño de la imagen) para distinguirlas dentro de la página
@@ -53,9 +52,10 @@ RECTANGULOS = {
         "cota_bandas": (245, 710, 485, 940), "placas_mallas": (505, 330, 790, 940),
         "armadura_completa": (790, 315, 1075, 945),
     },
+    # La lámina dibuja un escudo por número de atacantes cubiertos (+1/1, +1/2, +1/3, +6), sin material:
+    # solo el broquel y el pavés corresponden a un único artículo del catálogo
     "escudos": {
-        "broquel": (0, 0, 268, 539), "escudo_medio": (268, 0, 534, 539),
-        "escudo_pesado": (534, 0, 830, 539), "paves": (812, 0, 1090, 539),
+        "broquel": (0, 0, 268, 539), "paves": (812, 0, 1090, 539),
     },
     "cascos": {
         "cofia_cuero": (0, 0, 175, 272), "bacinete": (175, 0, 327, 272), "celada": (327, 0, 535, 272),
@@ -108,21 +108,8 @@ TRAZOS = {
 # Ilustraciones rotuladas de la caja roja: (página, tamaño, giro en grados en sentido antihorario)
 CAJA_ROJA = {
     "hacha_batalla": (41, (278, 704), 0),     # "Hacha de batalla"
-    "daga_plata": (41, (300, 222), 0),        # "Puñal"
     "lanza": (40, (765, 108), 270),           # "Lanza corta", impresa en vertical
-    "lanza_caballeria": (40, (108, 997), 0),  # "Lanza larga"
-    "ballesta_ligera": (40, (541, 619), 0),   # ballestero
     "flechas": (40, (194, 315), 0),           # "Flechas para arco corto"
-    "camisote_mallas": (42, (186, 244), 0),   # "Armadura de cota de mallas" (camisote, sin capucha)
-}
-
-# Artículos sin dibujo propio que comparten el de una variante muy parecida
-VARIANTES = {
-    "arco_corto_compuesto": "arco_corto", "arco_largo_compuesto": "arco_largo",
-    "ballesta_pesada": "ballesta_ligera", "virotes_ligeros": "virotes", "dardos_cerbatana": "cerbatana",
-    "cuerda_seda": "cuerda_canamo", "escudo_pequeno_madera": "broquel", "escudo_pequeno_metal": "broquel",
-    "escudo_medio_madera": "escudo_medio", "escudo_medio_metal": "escudo_medio",
-    "escudo_pesado_madera": "escudo_pesado", "escudo_pesado_metal": "escudo_pesado",
 }
 
 ALTO_MAX = 720
@@ -231,8 +218,6 @@ def main(cronicas, caja_roja, salida):
 
         for nombre, (pagina, tamano) in LAMINAS.items():
             im = imagen(cronicas, pagina, tamano, tmp)
-            if nombre != "armas_varias":
-                guardar(im, os.path.join(salida, f"lamina_{nombre}.webp"))
             for pieza, caja in RECTANGULOS.get(nombre, {}).items():
                 guardar(im.crop(caja), os.path.join(salida, f"objeto_{pieza}.webp"))
                 escritos.add(pieza)
@@ -248,13 +233,6 @@ def main(cronicas, caja_roja, salida):
                 im = im.rotate(giro, expand=True, fillcolor=(255, 255, 255))
             guardar(im, os.path.join(salida, f"objeto_{pieza}.webp"))
             escritos.add(pieza)
-
-    for pieza, origen in VARIANTES.items():
-        with open(os.path.join(salida, f"objeto_{origen}.webp"), "rb") as f:
-            datos = f.read()
-        with open(os.path.join(salida, f"objeto_{pieza}.webp"), "wb") as f:
-            f.write(datos)
-        escritos.add(pieza)
 
     print(f"{len(os.listdir(salida))} ilustraciones, {len(escritos)} objetos -> {salida}", file=sys.stderr)
 

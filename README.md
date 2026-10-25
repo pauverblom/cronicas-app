@@ -128,7 +128,8 @@ python3 scripts/extract_spells.py LORE/Cronicasdelamarca.pdf app/src/main/assets
 
 The class, species and equipment illustrations in `app/src/main/assets/ilustraciones/` come from the rulebook and from
 the red box (*Aventuras en la Marca del Este*, `LORE/caja_roja.pdf`). Each catalog item gets its own picture, cut out of
-the equipment plates along its own strokes; items the books don't draw fall back to their category plate:
+the equipment plates along its own strokes. Anything the books don't draw shows a red **MISSING PICTURE** card
+with the file name it expects (e.g. `objeto_estoque.webp`); drop a `.webp` with that name in the folder to fill it:
 
 ```bash
 python3 scripts/extract_ilustraciones.py LORE/Cronicasdelamarca.pdf LORE/caja_roja.pdf app/src/main/assets/ilustraciones
