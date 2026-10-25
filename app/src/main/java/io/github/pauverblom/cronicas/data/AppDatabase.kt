@@ -9,32 +9,30 @@ import androidx.room.RoomDatabase
     entities = [
         Personaje::class,
         Caracteristicas::class,
-        EstadoCombate::class,
-        Arma::class,
-        Conjuro::class,
-        ConjuroPersonaje::class,
-        EspaciosConjuro::class,
+        Estado::class,
         Objeto::class,
         Tesoro::class,
-        EfectoActivo::class,
-        Nota::class,
-        AccionUndo::class
+        Habilidad::class,
+        Condicion::class,
+        Compania::class,
+        Conjuro::class,
+        ConjuroPersonaje::class,
+        EspacioOverride::class,
+        Nota::class
     ],
-    version = 3
+    version = 4
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun personajeDao(): PersonajeDao
     abstract fun caracteristicasDao(): CaracteristicasDao
-    abstract fun estadoCombateDao(): EstadoCombateDao
-    abstract fun armaDao(): ArmaDao
-    abstract fun conjuroDao(): ConjuroDao
-    abstract fun conjuroPersonajeDao(): ConjuroPersonajeDao
-    abstract fun espaciosConjuroDao(): EspaciosConjuroDao
+    abstract fun estadoDao(): EstadoDao
     abstract fun objetoDao(): ObjetoDao
     abstract fun tesoroDao(): TesoroDao
-    abstract fun efectoActivoDao(): EfectoActivoDao
+    abstract fun habilidadDao(): HabilidadDao
+    abstract fun condicionDao(): CondicionDao
+    abstract fun companiaDao(): CompaniaDao
+    abstract fun conjuroDao(): ConjuroDao
     abstract fun notaDao(): NotaDao
-    abstract fun accionUndoDao(): AccionUndoDao
 
     companion object {
         @Volatile
@@ -42,6 +40,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
+                // La versión 4 rehace el esquema para la ficha de personaje: los datos de la 3 se descartan.
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
                     AppDatabase::class.java,

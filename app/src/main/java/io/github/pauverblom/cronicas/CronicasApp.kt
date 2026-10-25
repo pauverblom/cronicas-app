@@ -1,6 +1,7 @@
 package io.github.pauverblom.cronicas
 
 import android.app.Application
+import io.github.pauverblom.cronicas.data.AjustesRepository
 import io.github.pauverblom.cronicas.data.AppDatabase
 import io.github.pauverblom.cronicas.data.Repository
 import io.github.pauverblom.cronicas.data.SeedData
@@ -17,14 +18,18 @@ class CronicasApp : Application() {
     lateinit var repository: Repository
         private set
 
+    lateinit var ajustes: AjustesRepository
+        private set
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
         database = AppDatabase.getInstance(this)
         repository = Repository(database)
+        ajustes = AjustesRepository(this)
         appScope.launch {
-            SeedData.seedIfEmpty(repository)
+            SeedData.seedIfEmpty(repository, assets)
         }
     }
 }

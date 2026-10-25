@@ -2,16 +2,21 @@ package io.github.pauverblom.cronicas.data
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Embedded
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PersonajeDao {
-    @Query("SELECT * FROM personaje")
+    @Query("SELECT * FROM personaje ORDER BY creado")
     fun getAll(): Flow<List<Personaje>>
+
+    @Query("SELECT * FROM personaje WHERE id = :id")
+    fun observe(id: Long): Flow<Personaje?>
 
     @Query("SELECT * FROM personaje WHERE id = :id")
     suspend fun getById(id: Long): Personaje?
@@ -22,202 +27,226 @@ interface PersonajeDao {
     @Update
     suspend fun update(p: Personaje)
 
-    @Delete
-    suspend fun delete(p: Personaje)
-
-    @Query("SELECT COUNT(*) FROM personaje")
-    suspend fun count(): Int
+    @Query("DELETE FROM personaje WHERE id = :id")
+    suspend fun delete(id: Long)
 }
 
 @Dao
 interface CaracteristicasDao {
     @Query("SELECT * FROM caracteristicas WHERE personajeId = :pid")
-    fun getByPersonaje(pid: Long): Flow<Caracteristicas?>
+    fun observe(pid: Long): Flow<Caracteristicas?>
 
     @Query("SELECT * FROM caracteristicas WHERE personajeId = :pid")
-    suspend fun getByPersonajeSync(pid: Long): Caracteristicas?
+    suspend fun get(pid: Long): Caracteristicas?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Query("SELECT * FROM caracteristicas")
+    fun getAll(): Flow<List<Caracteristicas>>
+
+    @Upsert
     suspend fun upsert(c: Caracteristicas)
 }
 
 @Dao
-interface EstadoCombateDao {
-    @Query("SELECT * FROM estado_combate WHERE personajeId = :pid")
-    fun getByPersonaje(pid: Long): Flow<EstadoCombate?>
+interface EstadoDao {
+    @Query("SELECT * FROM estado WHERE personajeId = :pid")
+    fun observe(pid: Long): Flow<Estado?>
 
-    @Query("SELECT * FROM estado_combate WHERE personajeId = :pid")
-    suspend fun getByPersonajeSync(pid: Long): EstadoCombate?
+    @Query("SELECT * FROM estado WHERE personajeId = :pid")
+    suspend fun get(pid: Long): Estado?
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(e: EstadoCombate)
+    @Query("SELECT * FROM estado")
+    fun getAll(): Flow<List<Estado>>
 
-    @Query("UPDATE estado_combate SET pgActuales = :pg WHERE personajeId = :pid")
-    suspend fun updatePg(pid: Long, pg: Int)
-
-    @Query("UPDATE estado_combate SET danoAtenuado = :da WHERE personajeId = :pid")
-    suspend fun updateDanoAtenuado(pid: Long, da: Int)
+    @Upsert
+    suspend fun upsert(e: Estado)
 }
 
 @Dao
-interface ArmaDao {
-    @Query("SELECT * FROM arma WHERE personajeId = :pid")
-    fun getByPersonaje(pid: Long): Flow<List<Arma>>
+interface ObjetoDao {
+    @Query("SELECT * FROM objeto WHERE personajeId = :pid ORDER BY id")
+    fun observe(pid: Long): Flow<List<Objeto>>
+
+    @Query("SELECT * FROM objeto WHERE personajeId = :pid ORDER BY id")
+    suspend fun getAll(pid: Long): List<Objeto>
 
     @Insert
-    suspend fun insert(a: Arma): Long
-
-    @Delete
-    suspend fun delete(a: Arma)
+    suspend fun insert(o: Objeto): Long
 
     @Update
-    suspend fun update(a: Arma)
+    suspend fun update(o: Objeto)
+
+    @Delete
+    suspend fun delete(o: Objeto)
+
+    /** Saca el contenido de un contenedor que se va a borrar. */
+    @Query("UPDATE objeto SET contenedorId = NULL WHERE contenedorId = :contenedorId")
+    suspend fun vaciarContenedor(contenedorId: Long)
+
+    @Query("UPDATE objeto SET companiaId = NULL WHERE companiaId = :companiaId")
+    suspend fun descargarCompania(companiaId: Long)
 }
 
 @Dao
-interface ConjuroDao {
-    @Query("SELECT * FROM conjuro ORDER BY nivel, nombre")
-    fun getAll(): Flow<List<Conjuro>>
+interface TesoroDao {
+    @Query("SELECT * FROM tesoro WHERE personajeId = :pid")
+    fun observe(pid: Long): Flow<Tesoro?>
 
-    @Query("SELECT * FROM conjuro WHERE id = :id")
-    suspend fun getById(id: Long): Conjuro?
+    @Query("SELECT * FROM tesoro WHERE personajeId = :pid")
+    suspend fun get(pid: Long): Tesoro?
 
-    @Insert
-    suspend fun insert(c: Conjuro): Long
-
-    @Insert
-    suspend fun insertAll(conjuros: List<Conjuro>): List<Long>
-
-    @Delete
-    suspend fun delete(c: Conjuro)
-
-    @Update
-    suspend fun update(c: Conjuro)
-
-    @Query("DELETE FROM conjuro WHERE esPropio = 0")
-    suspend fun deleteNonOwn()
+    @Upsert
+    suspend fun upsert(t: Tesoro)
 }
 
-/** Fila de conjuro_personaje unida con los datos del conjuro. */
+@Dao
+interface HabilidadDao {
+    @Query("SELECT * FROM habilidad WHERE personajeId = :pid ORDER BY id")
+    fun observe(pid: Long): Flow<List<Habilidad>>
+
+    @Query("SELECT * FROM habilidad WHERE personajeId = :pid ORDER BY id")
+    suspend fun getAll(pid: Long): List<Habilidad>
+
+    @Insert
+    suspend fun insert(h: Habilidad): Long
+
+    @Insert
+    suspend fun insertAll(h: List<Habilidad>)
+
+    @Update
+    suspend fun update(h: Habilidad)
+
+    @Delete
+    suspend fun delete(h: Habilidad)
+}
+
+@Dao
+interface CondicionDao {
+    @Query("SELECT * FROM condicion WHERE personajeId = :pid ORDER BY id")
+    fun observe(pid: Long): Flow<List<Condicion>>
+
+    @Query("SELECT * FROM condicion WHERE personajeId = :pid ORDER BY id")
+    suspend fun getAll(pid: Long): List<Condicion>
+
+    @Insert
+    suspend fun insert(c: Condicion): Long
+
+    @Update
+    suspend fun update(c: Condicion)
+
+    @Delete
+    suspend fun delete(c: Condicion)
+}
+
+@Dao
+interface CompaniaDao {
+    @Query("SELECT * FROM compania WHERE personajeId = :pid ORDER BY id")
+    fun observe(pid: Long): Flow<List<Compania>>
+
+    @Query("SELECT * FROM compania WHERE personajeId = :pid ORDER BY id")
+    suspend fun getAll(pid: Long): List<Compania>
+
+    @Insert
+    suspend fun insert(c: Compania): Long
+
+    @Update
+    suspend fun update(c: Compania)
+
+    @Delete
+    suspend fun delete(c: Compania)
+}
+
 data class ConjuroConDetalle(
-    val personajeId: Long,
-    val conjuroId: Long,
-    val conocido: Boolean,
-    val preparadoVeces: Int,
-    val gastadoVeces: Int,
+    @Embedded val cp: ConjuroPersonaje,
+    @Embedded(prefix = "c_") val conjuro: ConjuroPlano
+)
+
+/** Columnas de [Conjuro] con prefijo para el JOIN. */
+data class ConjuroPlano(
+    val id: Long,
     val nombre: String,
-    val nivel: Int,
-    val tl: Int,
+    val niveles: String,
+    val tl: String,
     val componentes: String,
     val alcance: String,
     val duracion: String,
     val ts: String,
     val rc: String,
     val descripcion: String,
-    val notaTactica: String,
-    val verificar: Boolean
-)
-
-@Dao
-interface ConjuroPersonajeDao {
-    @Query(
-        """
-        SELECT cp.*, c.nombre, c.nivel, c.tl, c.componentes, c.alcance,
-               c.duracion, c.ts, c.rc, c.descripcion, c.notaTactica, c.verificar
-        FROM conjuro_personaje cp
-        JOIN conjuro c ON cp.conjuroId = c.id
-        WHERE cp.personajeId = :pid
-        ORDER BY c.nivel, c.nombre
-    """
-    )
-    fun getWithConjuro(pid: Long): Flow<List<ConjuroConDetalle>>
-
-    @Query("SELECT * FROM conjuro_personaje WHERE personajeId = :pid AND conjuroId = :cid")
-    suspend fun get(pid: Long, cid: Long): ConjuroPersonaje?
-
-    @Query("SELECT * FROM conjuro_personaje WHERE personajeId = :pid")
-    suspend fun getAllForPersonaje(pid: Long): List<ConjuroPersonaje>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(cp: ConjuroPersonaje)
-
-    @Delete
-    suspend fun delete(cp: ConjuroPersonaje)
-
-    @Query("UPDATE conjuro_personaje SET gastadoVeces = gastadoVeces + 1 WHERE personajeId = :pid AND conjuroId = :cid AND gastadoVeces < preparadoVeces")
-    suspend fun gastar(pid: Long, cid: Long): Int
-
-    @Query("UPDATE conjuro_personaje SET gastadoVeces = 0 WHERE personajeId = :pid")
-    suspend fun resetGastados(pid: Long)
-
-    @Query("UPDATE conjuro_personaje SET preparadoVeces = :veces WHERE personajeId = :pid AND conjuroId = :cid")
-    suspend fun updatePreparado(pid: Long, cid: Long, veces: Int)
-
-    @Query("DELETE FROM conjuro_personaje WHERE personajeId = :pid AND conjuroId = :cid")
-    suspend fun deleteByIds(pid: Long, cid: Long)
+    val esPropio: Boolean
+) {
+    fun toConjuro() = Conjuro(id, nombre, niveles, tl, componentes, alcance, duracion, ts, rc, descripcion, esPropio)
 }
 
 @Dao
-interface EspaciosConjuroDao {
-    @Query("SELECT * FROM espacios_conjuro WHERE personajeId = :pid ORDER BY nivel")
-    fun getByPersonaje(pid: Long): Flow<List<EspaciosConjuro>>
+interface ConjuroDao {
+    @Query("SELECT * FROM conjuro ORDER BY nombre COLLATE NOCASE")
+    fun getAll(): Flow<List<Conjuro>>
 
-    @Query("SELECT * FROM espacios_conjuro WHERE personajeId = :pid ORDER BY nivel")
-    suspend fun getByPersonajeSync(pid: Long): List<EspaciosConjuro>
+    @Query("SELECT * FROM conjuro")
+    suspend fun getAllOnce(): List<Conjuro>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(e: EspaciosConjuro)
+    @Query("SELECT COUNT(*) FROM conjuro WHERE esPropio = 0")
+    suspend fun countCatalogo(): Int
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(slots: List<EspaciosConjuro>)
-}
-
-@Dao
-interface ObjetoDao {
-    @Query("SELECT * FROM objeto WHERE personajeId = :pid ORDER BY esMagico DESC, nombre")
-    fun getByPersonaje(pid: Long): Flow<List<Objeto>>
+    @Query("SELECT * FROM conjuro WHERE nombre = :nombre LIMIT 1")
+    suspend fun byName(nombre: String): Conjuro?
 
     @Insert
-    suspend fun insert(o: Objeto): Long
+    suspend fun insert(c: Conjuro): Long
 
-    @Delete
-    suspend fun delete(o: Objeto)
+    @Insert
+    suspend fun insertAll(list: List<Conjuro>): List<Long>
 
     @Update
-    suspend fun update(o: Objeto)
-}
+    suspend fun update(c: Conjuro)
 
-@Dao
-interface TesoroDao {
-    @Query("SELECT * FROM tesoro WHERE personajeId = :pid")
-    fun getByPersonaje(pid: Long): Flow<Tesoro?>
+    @Query(
+        """
+        SELECT cp.*, c.id AS c_id, c.nombre AS c_nombre, c.niveles AS c_niveles, c.tl AS c_tl,
+               c.componentes AS c_componentes, c.alcance AS c_alcance, c.duracion AS c_duracion,
+               c.ts AS c_ts, c.rc AS c_rc, c.descripcion AS c_descripcion, c.esPropio AS c_esPropio
+        FROM conjuro_personaje cp JOIN conjuro c ON c.id = cp.conjuroId
+        WHERE cp.personajeId = :pid
+        ORDER BY cp.nivel, c.nombre COLLATE NOCASE
+        """
+    )
+    fun observeDePersonaje(pid: Long): Flow<List<ConjuroConDetalle>>
 
-    @Query("SELECT * FROM tesoro WHERE personajeId = :pid")
-    suspend fun getByPersonajeSync(pid: Long): Tesoro?
+    @Query("SELECT * FROM conjuro_personaje WHERE personajeId = :pid")
+    suspend fun getDePersonaje(pid: Long): List<ConjuroPersonaje>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsert(t: Tesoro)
-}
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertDePersonaje(cp: ConjuroPersonaje)
 
-@Dao
-interface EfectoActivoDao {
-    @Query("SELECT * FROM efecto_activo WHERE personajeId = :pid")
-    fun getByPersonaje(pid: Long): Flow<List<EfectoActivo>>
+    @Update
+    suspend fun updateDePersonaje(cp: ConjuroPersonaje)
 
-    @Insert
-    suspend fun insert(e: EfectoActivo): Long
+    @Query("DELETE FROM conjuro_personaje WHERE personajeId = :pid AND conjuroId = :cid")
+    suspend fun deleteDePersonaje(pid: Long, cid: Long)
 
-    @Delete
-    suspend fun delete(e: EfectoActivo)
+    @Query("UPDATE conjuro_personaje SET usadoVeces = 0 WHERE personajeId = :pid")
+    suspend fun descansar(pid: Long)
 
-    @Query("DELETE FROM efecto_activo WHERE id = :id")
-    suspend fun deleteById(id: Long)
+    @Query("SELECT * FROM espacio_override WHERE personajeId = :pid")
+    fun observeEspacios(pid: Long): Flow<List<EspacioOverride>>
+
+    @Query("SELECT * FROM espacio_override WHERE personajeId = :pid")
+    suspend fun getEspacios(pid: Long): List<EspacioOverride>
+
+    @Upsert
+    suspend fun upsertEspacio(e: EspacioOverride)
+
+    @Query("DELETE FROM espacio_override WHERE personajeId = :pid AND nivel = :nivel")
+    suspend fun deleteEspacio(pid: Long, nivel: Int)
 }
 
 @Dao
 interface NotaDao {
     @Query("SELECT * FROM nota WHERE personajeId = :pid ORDER BY timestamp DESC")
-    fun getByPersonaje(pid: Long): Flow<List<Nota>>
+    fun observe(pid: Long): Flow<List<Nota>>
+
+    @Query("SELECT * FROM nota WHERE personajeId = :pid ORDER BY timestamp DESC")
+    suspend fun getAll(pid: Long): List<Nota>
 
     @Insert
     suspend fun insert(n: Nota): Long
@@ -226,24 +255,5 @@ interface NotaDao {
     suspend fun update(n: Nota)
 
     @Query("DELETE FROM nota WHERE id = :id")
-    suspend fun deleteById(id: Long)
-}
-
-@Dao
-interface AccionUndoDao {
-    @Insert
-    suspend fun insert(a: AccionUndo): Long
-
-    @Query("DELETE FROM accion_undo WHERE id = :id")
     suspend fun delete(id: Long)
-
-    /** Conserva solo las 30 acciones más recientes por personaje. */
-    @Query("DELETE FROM accion_undo WHERE personajeId = :pid AND id NOT IN (SELECT id FROM accion_undo WHERE personajeId = :pid ORDER BY timestamp DESC LIMIT 30)")
-    suspend fun trimOld(pid: Long)
-
-    @Query("SELECT * FROM accion_undo WHERE personajeId = :pid ORDER BY timestamp DESC LIMIT 1")
-    suspend fun getLastAction(pid: Long): AccionUndo?
-
-    @Query("SELECT COUNT(*) FROM accion_undo WHERE personajeId = :pid")
-    suspend fun count(pid: Long): Int
 }
