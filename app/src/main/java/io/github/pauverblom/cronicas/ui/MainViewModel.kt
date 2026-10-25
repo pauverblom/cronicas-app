@@ -41,7 +41,6 @@ data class MesaUiState(
     val objetos: List<Objeto> = emptyList(),
     val tesoro: Tesoro? = null,
     val notas: List<Nota> = emptyList(),
-    val snackbarMessage: String? = null,
     val loading: Boolean = true
 )
 
@@ -167,13 +166,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             val current = _uiState.value.combate ?: return@launch
             val newPg = clampPg(current.pgActuales + delta, current)
-            if (newPg == current.pgActuales) {
-                showSnackbar(if (delta > 0) "PG ya al máximo (${current.pgMaximos})" else "PG ya a 0")
-                return@launch
-            }
+            if (newPg == current.pgActuales) return@launch
             undoManager.pushPgChange(pid, current.pgActuales)
             repo.updatePg(pid, newPg)
-            showSnackbar("PG: ${current.pgActuales} → $newPg")
         }
     }
 
@@ -189,8 +184,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun undo() {
         viewModelScope.launch {
-            val msg = undoManager.undo(pid)
-            if (msg != null) showSnackbar(msg)
+            undoManager.undo(pid)
         }
     }
 
@@ -202,7 +196,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (cp.gastadoVeces >= cp.preparadoVeces) return@launch
             undoManager.pushConjuroGastado(pid, conjuroId, cp.gastadoVeces)
             repo.upsertConjuroPersonaje(cp.copy(gastadoVeces = cp.gastadoVeces + 1))
-            showSnackbar("Conjuro lanzado")
         }
     }
 
@@ -237,7 +230,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 undoManager.pushDescanso(pid, gastados)
             }
             repo.resetConjurosGastados(pid)
-            showSnackbar("Descanso completado")
         }
     }
 
@@ -299,8 +291,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun importCsv(content: String) {
         viewModelScope.launch {
-            val count = repo.importConjurosFromCsv(content)
-            showSnackbar("$count conjuros importados")
+            repo.importConjurosFromCsv(content)
         }
     }
 
@@ -362,20 +353,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun tickEffects(units: Int, unitType: String) {
         viewModelScope.launch {
             val current = _uiState.value.efectos
-            val expiring = mutableListOf<String>()
             for (efecto in current) {
                 if (efecto.unidad != unitType) continue
                 val newRestante = efecto.restante - units
                 if (newRestante <= 0) {
                     repo.deleteEfecto(efecto.id)
-                    expiring.add(efecto.nombre)
                 } else {
                     repo.insertEfecto(efecto.copy(id = 0, restante = newRestante))
                     repo.deleteEfecto(efecto.id)
                 }
-            }
-            if (expiring.isNotEmpty()) {
-                showSnackbar("¡Expirado: ${expiring.joinToString(", ")}!")
             }
         }
     }
@@ -394,7 +380,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 repo.updateDanoAtenuado(pid, newDa)
                 val newPg = clampPg(combate.pgActuales + 1, combate)
                 repo.updatePg(pid, newPg)
-                showSnackbar("Daño atenuado: recuperas 1 PG (${combate.danoAtenuado}→$newDa)")
             }
         }
     }
@@ -514,7 +499,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             repo.upsertTesoro(Tesoro(personajeId = newPid))
             selectCharacter(newPid)
-            showSnackbar("${form.nombre} creado")
         }
     }
 
@@ -578,7 +562,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (personaje.id == pid) {
                 allPjs.firstOrNull { it.id != personaje.id }?.let { selectCharacter(it.id) }
             }
-            showSnackbar("${personaje.nombre} eliminado")
         }
     }
 
@@ -633,14 +616,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val total = espacio.override_ ?: espacio.total
         val preparados = state.conjurosPersonaje.filter { it.nivel == nivel }.sumOf { it.preparadoVeces }
         return preparados > total
-    }
-
-    private fun showSnackbar(msg: String) {
-        _uiState.update { it.copy(snackbarMessage = msg) }
-    }
-
-    fun clearSnackbar() {
-        _uiState.update { it.copy(snackbarMessage = null) }
     }
 
     private companion object {

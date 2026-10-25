@@ -36,16 +36,10 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -86,36 +80,9 @@ fun AppNavigation(viewModel: MainViewModel = viewModel()) {
     var showEditChar by remember { mutableStateOf(false) }
     var pendingDelete by remember { mutableStateOf<Personaje?>(null) }
     val state by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
-
-    // Cada mensaje se muestra con la acción "Deshacer".
-    LaunchedEffect(state.snackbarMessage) {
-        state.snackbarMessage?.let { msg ->
-            val result = snackbarHostState.showSnackbar(
-                message = msg,
-                actionLabel = "Deshacer",
-                duration = SnackbarDuration.Short
-            )
-            if (result == SnackbarResult.ActionPerformed) {
-                viewModel.undo()
-            }
-            viewModel.clearSnackbar()
-        }
-    }
 
     Scaffold(
         containerColor = ParchmentDark,
-        snackbarHost = {
-            SnackbarHost(snackbarHostState) { data ->
-                Snackbar(
-                    snackbarData = data,
-                    shape = RoundedCornerShape(12.dp),
-                    containerColor = ParchmentSurfaceVariant,
-                    contentColor = Parchment,
-                    actionColor = GoldAccent
-                )
-            }
-        },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
