@@ -123,7 +123,8 @@ fun CampoNumero(
     negativos: Boolean = false,
     decimales: Boolean = false,
     soporte: String? = null,
-    maxLength: Int = 8
+    maxLength: Int = 8,
+    error: String? = null
 ) {
     OutlinedTextField(
         value = valor,
@@ -134,7 +135,8 @@ fun CampoNumero(
         label = { Text(etiqueta) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = if (decimales) KeyboardType.Decimal else KeyboardType.Number),
-        supportingText = soporte?.let { { Text(it) } },
+        isError = error != null,
+        supportingText = (error ?: soporte)?.let { { Text(it) } },
         modifier = modifier
     )
 }

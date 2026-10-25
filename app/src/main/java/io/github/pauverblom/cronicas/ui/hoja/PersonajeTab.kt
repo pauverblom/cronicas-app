@@ -396,7 +396,8 @@ private fun SubirNivelDialog(ui: HojaUi, onDismiss: () -> Unit, onConfirmar: (ni
         onDismiss = onDismiss,
         onGuardar = { onConfirmar(nuevo, pg) },
         guardar = "Subir",
-        guardarActivo = nuevo <= Progresion.NIVEL_MAXIMO && (!necesitaTirada || tirada.toIntOrNull() != null)
+        guardarActivo = nuevo <= Progresion.NIVEL_MAXIMO &&
+            (!necesitaTirada || tirada.toIntOrNull()?.let { clase == null || it in 1..dado } == true)
     ) {
         when {
             clase == null -> {
@@ -404,8 +405,13 @@ private fun SubirNivelDialog(ui: HojaUi, onDismiss: () -> Unit, onConfirmar: (ni
                 CampoNumero(tirada, { tirada = it }, "PG ganados")
             }
             nuevo <= 10 -> {
-                Text("Tira 1d$dado y escribe el resultado. Se suma tu modificador de CON (${signo(modCon)}), con un mínimo de 1 PG.")
-                CampoNumero(tirada, { tirada = it }, "Resultado del d$dado")
+                Text("Tira 1d$dado y escribe el resultado. Se te sumará ${signo(modCon)} (tu modificador de CON); si el total queda por debajo de 1, ganas 1 PG.")
+                CampoNumero(
+                    tirada, { tirada = it }, "Resultado del d$dado",
+                    maxLength = 2,
+                    soporte = "Entre 1 y $dado",
+                    error = tirada.toIntOrNull()?.takeIf { it !in 1..dado }?.let { "Un d$dado da entre 1 y $dado" }
+                )
             }
             nuevo <= 12 -> Text("A partir del nivel 11 ya no se tira dado: ganas $fijos PG fijos.")
             else -> Text("Después del nivel 12 no se ganan más PG ni BA, pero el nivel sigue contando para tiradas y salvaciones.")

@@ -28,6 +28,7 @@ data class ClaseDef(
     val id: String,
     val nombre: String,
     val principal: Atributo,
+    val descripcion: String = "",
     val dado: Int,
     val pgFijos: Int,
     val alineamiento: String,
@@ -70,7 +71,7 @@ private fun xp(vararg n: Int) = listOf(0) + n.toList()
 object Clases {
 
     val asesino = ClaseDef(
-        id = "asesino", nombre = "Asesino", principal = DES, dado = 6, pgFijos = 2,
+        id = "asesino", nombre = "Asesino", descripcion = "Maestros del disfraz y la infiltración, especializados en asesinatos por encargo. Suelen moverse por grandes ciudades, envueltos en intrigas políticas y comerciales.", principal = DES, dado = 6, pgFijos = 2,
         alineamiento = "Cualquiera no bueno",
         xp = xp(1751, 3501, 7001, 14001, 25001, 50001, 90001, 150001, 200001, 350001, 500001), xpTras12 = 150000,
         ba = BA_PICARO, armaduras = CUEROS, oroInicial = "3d4 × 10 mo",
@@ -89,7 +90,7 @@ object Clases {
     )
 
     val barbaro = ClaseDef(
-        id = "barbaro", nombre = "Bárbaro", principal = CON, dado = 12, pgFijos = 5, alineamiento = "Cualquiera",
+        id = "barbaro", nombre = "Bárbaro", descripcion = "Guerreros poderosos de voluntad indómita, tenaces y arrojados en combate. Vienen de tierras poco civilizadas y tribus gobernadas por caudillos.", principal = CON, dado = 12, pgFijos = 5, alineamiento = "Cualquiera",
         xp = xp(2101, 4701, 9401, 20001, 40001, 80001, 170001, 340001, 600001, 800001, 1000001), xpTras12 = 200000,
         ba = BA_COMBATIENTE, oroInicial = "2d4 × 10 mo",
         habilidades = listOf(
@@ -104,7 +105,7 @@ object Clases {
     )
 
     val bardo = ClaseDef(
-        id = "bardo", nombre = "Bardo", principal = CAR, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
+        id = "bardo", nombre = "Bardo", descripcion = "Se abren camino con encanto, talento e ingenio. Gente de mundo que aprende habilidades muy variadas y anima a sus compañeros con su arte.", principal = CAR, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
         xp = xp(1501, 3251, 7501, 15001, 30001, 60001, 120001, 240001, 450001, 625001, 800001), xpTras12 = 175000,
         ba = BA_COMBATIENTE,
         armas = setOf(
@@ -124,7 +125,7 @@ object Clases {
     )
 
     val caballero = ClaseDef(
-        id = "caballero", nombre = "Caballero", principal = CAR, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
+        id = "caballero", nombre = "Caballero", descripcion = "Famosos por su pericia marcial, su honor y su disciplina. Soldados cultivados que se deben a su señor y a un estricto código.", principal = CAR, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
         xp = xp(2251, 4501, 9001, 18001, 36001, 72001, 150001, 300001, 600001, 725001, 900001), xpTras12 = 175000,
         ba = BA_COMBATIENTE, oroInicial = "6d4 × 10 mo (y un caballo de monta)",
         habilidades = listOf(
@@ -139,7 +140,7 @@ object Clases {
     )
 
     val clerigo = ClaseDef(
-        id = "clerigo", nombre = "Clérigo", principal = SAB, dado = 8, pgFijos = 3, alineamiento = "Cualquiera",
+        id = "clerigo", nombre = "Clérigo", descripcion = "Han consagrado su vida a servir a una deidad y defender su doctrina, con los conjuros que les otorga su dios y con las armas.", principal = SAB, dado = 8, pgFijos = 3, alineamiento = "Cualquiera",
         xp = xp(2251, 5001, 9001, 18001, 35001, 70001, 140001, 300001, 425001, 650001, 900001), xpTras12 = 250000,
         ba = BA_SACERDOTE,
         armas = setOf("baston", "cachiporra", "garrote", "honda", "lucero_alba", "martillo_guerra", "martillo_ligero", "maza"),
@@ -157,7 +158,7 @@ object Clases {
     )
 
     val druida = ClaseDef(
-        id = "druida", nombre = "Druida", principal = SAB, dado = 8, pgFijos = 3, alineamiento = "Cualquiera neutral",
+        id = "druida", nombre = "Druida", descripcion = "Devotos de la naturaleza, sabios y ponderados, que luchan por el equilibrio de todas las cosas y protegen la tierra y el mar.", principal = SAB, dado = 8, pgFijos = 3, alineamiento = "Cualquiera neutral",
         xp = xp(2001, 4251, 8501, 17001, 35001, 70001, 180001, 275001, 400001, 525001, 650001), xpTras12 = 175000,
         ba = BA_SACERDOTE,
         armas = setOf(
@@ -178,7 +179,7 @@ object Clases {
     )
 
     val explorador = ClaseDef(
-        id = "explorador", nombre = "Explorador", principal = FUE, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
+        id = "explorador", nombre = "Explorador", descripcion = "Rastreadores y supervivientes de las tierras salvajes. Se mimetizan con el entorno y conocen como nadie los caminos y sus peligros.", principal = FUE, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
         xp = xp(2251, 4501, 9001, 18001, 40001, 75001, 150001, 250001, 500001, 725001, 950001), xpTras12 = 225000,
         ba = BA_COMBATIENTE,
         armaduras = CUEROS + setOf("anillas", "armadura_varillas", "cota_escamas", "cota_mallas", "peto_coraza"),
@@ -197,7 +198,7 @@ object Clases {
     )
 
     val guerrero = ClaseDef(
-        id = "guerrero", nombre = "Guerrero", principal = FUE, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
+        id = "guerrero", nombre = "Guerrero", descripcion = "Luchadores experimentados que consagran su vida al arte de la guerra. Dominan armas y armaduras de todo tipo.", principal = FUE, dado = 10, pgFijos = 4, alineamiento = "Cualquiera",
         xp = xp(2001, 4001, 8501, 17001, 34001, 68001, 136001, 272001, 500001, 750001, 1000001), xpTras12 = 250000,
         ba = (1..12).toList(), oroInicial = "3d8 × 10 mo",
         habilidades = listOf(
@@ -208,7 +209,7 @@ object Clases {
     )
 
     val ilusionista = ClaseDef(
-        id = "ilusionista", nombre = "Ilusionista", principal = INT, dado = 4, pgFijos = 1, alineamiento = "Cualquiera",
+        id = "ilusionista", nombre = "Ilusionista", descripcion = "Usan la magia para alterar lo que los demás perciben: imágenes y sonidos falsos, engaños de la mente e incluso cambios en la realidad.", principal = INT, dado = 4, pgFijos = 1, alineamiento = "Cualquiera",
         xp = xp(2601, 5201, 10401, 20801, 42501, 85001, 170001, 340001, 500001, 750001, 900001), xpTras12 = 150000,
         ba = BA_ARCANO, armas = setOf("baston", "daga", "daga_plata", "dardo", "garrote"), armaduras = NINGUNO, escudos = NINGUNO,
         oroInicial = "1d10 × 10 mo",
@@ -221,7 +222,7 @@ object Clases {
     )
 
     val ladron = ClaseDef(
-        id = "ladron", nombre = "Ladrón", principal = DES, dado = 6, pgFijos = 2, alineamiento = "Cualquiera",
+        id = "ladron", nombre = "Ladrón", descripcion = "Buscavidas hábiles y astutos de las duras calles de la ciudad: trapichean, roban, engañan y reúnen información para sobrevivir.", principal = DES, dado = 6, pgFijos = 2, alineamiento = "Cualquiera",
         xp = xp(1251, 2501, 6001, 12001, 24001, 48001, 80001, 120001, 175001, 325001, 450001), xpTras12 = 125000,
         ba = BA_PICARO, armaduras = CUEROS, oroInicial = "3d4 × 10 mo",
         habilidades = listOf(
@@ -240,7 +241,7 @@ object Clases {
     )
 
     val mago = ClaseDef(
-        id = "mago", nombre = "Mago", principal = INT, dado = 4, pgFijos = 1, alineamiento = "Cualquiera",
+        id = "mago", nombre = "Mago", descripcion = "Estudiosos de lo arcano que aprenden sus conjuros de los libros. Frágiles al principio, terriblemente poderosos con el tiempo.", principal = INT, dado = 4, pgFijos = 1, alineamiento = "Cualquiera",
         xp = xp(2601, 5201, 10401, 20801, 42501, 85001, 170001, 340001, 500001, 750001, 1000001), xpTras12 = 250000,
         ba = BA_ARCANO, armas = setOf("baston", "daga", "daga_plata", "dardo", "garrote"), armaduras = NINGUNO, escudos = NINGUNO,
         oroInicial = "1d10 × 10 mo",
@@ -251,7 +252,7 @@ object Clases {
     )
 
     val mistico = ClaseDef(
-        id = "mistico", nombre = "Místico", principal = CON, dado = 12, pgFijos = 5, alineamiento = "Cualquiera",
+        id = "mistico", nombre = "Místico", descripcion = "Disciplinados y frugales, buscan la perfección del cuerpo y del espíritu y convierten su cuerpo en un arma letal con las artes marciales.", principal = CON, dado = 12, pgFijos = 5, alineamiento = "Cualquiera",
         xp = xp(1751, 4001, 8501, 20001, 40001, 80001, 160001, 325001, 550001, 750001, 1250001), xpTras12 = 250000,
         ba = BA_COMBATIENTE,
         armasProhibidas = setOf(
@@ -274,7 +275,7 @@ object Clases {
     )
 
     val paladin = ClaseDef(
-        id = "paladin", nombre = "Paladín", principal = CAR, dado = 10, pgFijos = 4, alineamiento = "Legal bueno",
+        id = "paladin", nombre = "Paladín", descripcion = "Guerreros con una fe capaz de mover montañas. Defienden los principios de su dios bajo un estricto código moral.", principal = CAR, dado = 10, pgFijos = 4, alineamiento = "Legal bueno",
         xp = xp(2701, 5501, 12001, 24001, 48001, 95001, 180001, 360001, 700001, 1000001, 1300001), xpTras12 = 300000,
         ba = BA_COMBATIENTE, oroInicial = "6d4 × 10 mo",
         habilidades = listOf(

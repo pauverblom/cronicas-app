@@ -14,7 +14,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.key
+import io.github.pauverblom.cronicas.ui.common.Carrusel
+import io.github.pauverblom.cronicas.ui.common.Ilustracion
+import io.github.pauverblom.cronicas.ui.common.Ilustraciones
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -376,18 +380,38 @@ private fun CatalogoSheet(
             }
         }
         val lista = if (busqueda.isBlank()) pestana.lista else Catalogo.todos.filter { it.nombre.contains(busqueda.trim(), ignoreCase = true) }
-        LazyColumn(Modifier.fillMaxWidth().height(460.dp)) {
-            items(lista, key = { it.id }) { a ->
-                Row(
-                    Modifier.fillMaxWidth().clickable { elegido = a }.padding(horizontal = 16.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(a.nombre, style = MaterialTheme.typography.bodyLarge)
-                        Text(detalleArticulo(a), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (a.notas.isNotBlank()) Text(a.notas, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+        if (lista.isEmpty()) {
+            Text(
+                "Nada coincide con «${busqueda.trim()}».",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
+            )
+        }
+        // Un carrusel nuevo por cada categoría o búsqueda, empezando por la primera tarjeta
+        key(pestana, busqueda.trim()) {
+            if (lista.isNotEmpty()) {
+                val pager = rememberPagerState { lista.size }
+                Carrusel(
+                    pager, lista, seleccionada = { false }, onElegir = { elegido = it },
+                    clave = { it.id },
+                    modifier = Modifier.padding(bottom = 24.dp)
+                ) { a ->
+                    Ilustracion(Ilustraciones.articulo(a), a.nombre, 220.dp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(a.nombre, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f))
+                        Text(Monedas.formato(a.precioMc), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                     }
-                    Text(Monedas.formato(a.precioMc), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                    Text(detalleArticulo(a), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        a.notas.ifBlank { a.categoria.etiqueta },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        minLines = 2
+                    )
+                    OutlinedButton(onClick = { elegido = a }, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.Add, null); Text("Añadir")
+                    }
                 }
             }
         }

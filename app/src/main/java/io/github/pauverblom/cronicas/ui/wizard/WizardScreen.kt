@@ -18,6 +18,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.pager.rememberPagerState
+import io.github.pauverblom.cronicas.rules.data.TablaConjuros
+import io.github.pauverblom.cronicas.ui.common.Carrusel
+import io.github.pauverblom.cronicas.ui.common.DatoTarjeta
+import io.github.pauverblom.cronicas.ui.common.Ilustracion
+import io.github.pauverblom.cronicas.ui.common.Ilustraciones
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -107,6 +113,17 @@ data class WizardState(
     val primariasRequeridas: Int get() = 1 + (especie?.primariasExtra ?: 1)
 
     fun puntuacion(a: Atributo): Int? = puntuaciones[a]?.toIntOrNull()?.takeIf { it in 3..18 }
+
+    /** Dado de golpe de nivel 1 (combinado si hay multiclase), o null con clase personalizada. */
+    val dadoGolpe: Int? get() = clase?.let { c -> secundaria?.let { Clases.dadoMulticlase(c.dado, it.dado).first } ?: c.dado }
+    val modCon: Int get() = ajustada(Atributo.CON)?.let { Modifiers.modifier(it) } ?: 0
+
+    /** Con clase de reglamento [pgMax] es la tirada del dado y se suma CON (mínimo 1); si no, son los PG totales. */
+    val pgTotal: Int? get() {
+        val n = pgMax.toIntOrNull() ?: return null
+        val dado = dadoGolpe ?: return n.takeIf { it >= 1 }
+        return if (n in 1..dado) maxOf(1, n + modCon) else null
+    }
     fun ajustada(a: Atributo): Int? = puntuacion(a)?.let { it + (especie?.mods?.get(a) ?: 0) }
 
     fun pasoValido(p: Int = paso): Boolean = when (p) {
@@ -115,7 +132,7 @@ data class WizardState(
         2 -> claseId != null && (claseId != PERSONALIZADA || claseNombre.isNotBlank()) && (!multiclase || secundaria != null)
         3 -> Atributo.entries.all { puntuacion(it) != null } && primarias.size == primariasRequeridas &&
             (clase == null || clase!!.principal in primarias)
-        4 -> (pgMax.toIntOrNull() ?: 0) >= 1
+        4 -> pgTotal != null
         else -> true
     }
 }
@@ -176,7 +193,7 @@ class WizardViewModel(app: Application) : AndroidViewModel(app) {
             for (a in Atributo.entries) {
                 c = c.conBase(a, s.puntuacion(a) ?: 10).conPrimaria(a, a in s.primarias)
             }
-            val id = repo.crearPersonaje(p, c, s.pgMax.toIntOrNull() ?: 1, Tesoro(0, oro = s.oro.toIntOrNull() ?: 0))
+            val id = repo.crearPersonaje(p, c, s.pgTotal ?: 1, Tesoro(0, oro = s.oro.toIntOrNull() ?: 0))
             s.retrato?.let { uri ->
                 runCatching { Retratos.guardar(getApplication(), id, uri, null) }.getOrNull()?.let { (path, semilla) ->
                     repo.getPersonaje(id)?.let { repo.updatePersonaje(it.copy(fotoPath = path, colorSemilla = semilla)) }
@@ -288,33 +305,25 @@ private fun PasoNombre(s: WizardState, vm: WizardViewModel) {
 }
 
 @Composable
-private fun OpcionCard(seleccionada: Boolean, onClick: () -> Unit, content: @Composable () -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (seleccionada) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
-        ),
-        border = if (seleccionada) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null
-    ) { Column(Modifier.padding(12.dp)) { content() } }
-}
-
-@Composable
 private fun PasoEspecie(s: WizardState, vm: WizardViewModel) {
-    Especies.todas.forEach { e ->
-        OpcionCard(s.especieId == e.id, { vm.elegirEspecie(e.id) }) {
-            Text(e.nombre, style = MaterialTheme.typography.titleMedium)
-            val mods = e.mods.entries.joinToString(", ") { "${it.key.abrev} ${signo(it.value)}" }.ifBlank { "Sin modificadores" }
-            Text(
-                "$mods · ${if (e.pequeno) "Pequeño, 6 m" else "Mediano, 10 m"} · ${e.primariasExtra + 1} primarias",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    val opciones = Especies.todas.map { it.id } + PERSONALIZADA
+    val pager = rememberPagerState(initialPage = opciones.indexOf(s.especieId).coerceAtLeast(0)) { opciones.size }
+    Text("Desliza para ver las especies y toca la que quieras.", style = MaterialTheme.typography.bodyMedium)
+    Carrusel(pager, opciones, { it == s.especieId }, vm::elegirEspecie, clave = { it }) { id ->
+        val e = Especies.porId(id)
+        if (e == null) {
+            Ilustracion(null, "Personalizada", 300.dp)
+            Text("Personalizada", style = MaterialTheme.typography.titleLarge)
+            Text("Una especie que no está en el reglamento. Sin modificadores automáticos: lo rellenas tú.", style = MaterialTheme.typography.bodyMedium)
+            return@Carrusel
         }
-    }
-    OpcionCard(s.especieId == PERSONALIZADA, { vm.elegirEspecie(PERSONALIZADA) }) {
-        Text("Personalizada", style = MaterialTheme.typography.titleMedium)
-        Text("Sin datos de reglamento: lo rellenas tú.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Ilustracion(Ilustraciones.especie(e.id), e.nombre, 300.dp)
+        Text(e.nombre, style = MaterialTheme.typography.titleLarge)
+        Text(e.descripcion, style = MaterialTheme.typography.bodyMedium)
+        DatoTarjeta("Características:", e.mods.entries.joinToString(", ") { "${it.key.abrev} ${signo(it.value)}" }.ifBlank { "sin modificadores" })
+        DatoTarjeta("Tamaño:", if (e.pequeno) "pequeño, 6 m de movimiento" else "mediano, 10 m de movimiento")
+        DatoTarjeta("Primarias:", "la de la clase y ${e.primariasExtra} a elegir")
+        DatoTarjeta("Rasgos:", e.rasgos.joinToString { it.nombre })
     }
     if (s.especieId == PERSONALIZADA) {
         OutlinedTextField(s.especieNombre, { v -> vm.editar { it.copy(especieNombre = v) } }, label = { Text("Nombre de la especie") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -323,19 +332,25 @@ private fun PasoEspecie(s: WizardState, vm: WizardViewModel) {
 
 @Composable
 private fun PasoClase(s: WizardState, vm: WizardViewModel) {
-    Clases.todas.forEach { c ->
-        OpcionCard(s.claseId == c.id, { vm.elegirClase(c.id) }) {
-            Text(c.nombre, style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Principal: ${c.principal.abrev} · DG d${c.dado}" + if (c.tablaConjuros != null) " · Conjuros" else "",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    val opciones = Clases.todas.map { it.id } + PERSONALIZADA
+    val pager = rememberPagerState(initialPage = opciones.indexOf(s.claseId).coerceAtLeast(0)) { opciones.size }
+    Text("Desliza para ver las clases y toca la que quieras.", style = MaterialTheme.typography.bodyMedium)
+    Carrusel(pager, opciones, { it == s.claseId }, vm::elegirClase, clave = { it }) { id ->
+        val c = Clases.porId(id)
+        if (c == null) {
+            Ilustracion(null, "Personalizada", 300.dp)
+            Text("Personalizada", style = MaterialTheme.typography.titleLarge)
+            Text("Una clase que no está en el reglamento. Sin cálculos automáticos: lo rellenas tú.", style = MaterialTheme.typography.bodyMedium)
+            return@Carrusel
         }
-    }
-    OpcionCard(s.claseId == PERSONALIZADA, { vm.elegirClase(PERSONALIZADA) }) {
-        Text("Personalizada", style = MaterialTheme.typography.titleMedium)
-        Text("Sin cálculos automáticos.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Ilustracion(Ilustraciones.clase(c.id), c.nombre, 300.dp)
+        Text(c.nombre, style = MaterialTheme.typography.titleLarge)
+        Text(c.descripcion, style = MaterialTheme.typography.bodyMedium)
+        DatoTarjeta("Característica principal:", c.principal.nombre)
+        DatoTarjeta("Dado de golpe:", "d${c.dado}")
+        DatoTarjeta("Alineamiento:", c.alineamiento)
+        if (c.tablaConjuros != null) DatoTarjeta("Magia:", if (c.tablaConjuros == TablaConjuros.DIVINA) "conjuros divinos" else "conjuros arcanos")
+        DatoTarjeta("Habilidades:", c.habilidades.filter { it.nivel == 1 }.joinToString { it.nombre })
     }
     if (s.claseId == PERSONALIZADA) {
         OutlinedTextField(s.claseNombre, { v -> vm.editar { it.copy(claseNombre = v) } }, label = { Text("Nombre de la clase") }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -364,7 +379,7 @@ private fun PasoClase(s: WizardState, vm: WizardViewModel) {
 @Composable
 private fun PasoCaracteristicas(s: WizardState, vm: WizardViewModel) {
     Text(
-        "Tira 3d6 seis veces y asigna los resultados. Marca ${s.primariasRequeridas} características primarias" +
+        "Tira 3d6 seis veces y asigna los resultados (cada uno entre 3 y 18). Marca ${s.primariasRequeridas} características primarias" +
             (s.clase?.let { " (${it.principal.abrev} es obligatoria para ${it.nombre.lowercase()})" } ?: "") + ".",
         style = MaterialTheme.typography.bodyMedium
     )
@@ -378,7 +393,9 @@ private fun PasoCaracteristicas(s: WizardState, vm: WizardViewModel) {
                 { v -> vm.editar { it.copy(puntuaciones = it.puntuaciones + (a to v)) } },
                 a.nombre,
                 modifier = Modifier.width(140.dp),
-                maxLength = 2
+                maxLength = 2,
+                soporte = "Entre 3 y 18",
+                error = s.puntuaciones[a]?.toIntOrNull()?.takeIf { it !in 3..18 }?.let { "Entre 3 y 18" }
             )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -400,15 +417,26 @@ private fun PasoCaracteristicas(s: WizardState, vm: WizardViewModel) {
 
 @Composable
 private fun PasoPg(s: WizardState, vm: WizardViewModel) {
-    val modCon = s.ajustada(Atributo.CON)?.let { Modifiers.modifier(it) } ?: 0
-    val clase = s.clase
-    if (clase != null) {
-        val dado = if (s.secundaria != null) Clases.dadoMulticlase(clase.dado, s.secundaria!!.dado).first else clase.dado
-        Text("Tira 1d$dado y suma tu modificador de CON (${signo(modCon)}). El mínimo es 1.", style = MaterialTheme.typography.bodyMedium)
+    val dado = s.dadoGolpe
+    if (dado != null) {
+        Text(
+            "Tira 1d$dado y escribe el resultado. Se te sumará ${signo(s.modCon)} (tu modificador de CON); " +
+                "si el total queda por debajo de 1, tendrás 1 PG.",
+            style = MaterialTheme.typography.bodyMedium
+        )
+        val tirada = s.pgMax.toIntOrNull()
+        CampoNumero(
+            s.pgMax, { v -> vm.editar { it.copy(pgMax = v) } }, "Resultado del d$dado",
+            modifier = Modifier.fillMaxWidth(),
+            maxLength = 2,
+            soporte = "Entre 1 y $dado",
+            error = tirada?.takeIf { it !in 1..dado }?.let { "Un d$dado da entre 1 y $dado" }
+        )
+        s.pgTotal?.let { Text("PG máximos: $it", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary) }
     } else {
         Text("Introduce los puntos de golpe máximos de tu personaje.", style = MaterialTheme.typography.bodyMedium)
+        CampoNumero(s.pgMax, { v -> vm.editar { it.copy(pgMax = v) } }, "PG máximos", modifier = Modifier.fillMaxWidth())
     }
-    CampoNumero(s.pgMax, { v -> vm.editar { it.copy(pgMax = v) } }, "PG máximos", modifier = Modifier.fillMaxWidth())
 }
 
 @Composable

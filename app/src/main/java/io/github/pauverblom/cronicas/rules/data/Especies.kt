@@ -12,6 +12,7 @@ data class EspecieDef(
     val id: String,
     val nombre: String,
     val mods: Map<Atributo, Int>,
+    val descripcion: String = "",
     val pequeno: Boolean,
     val idiomas: String,
     val rasgos: List<HabilidadDef>,
@@ -29,7 +30,7 @@ private val RASGOS_ELFO_HABILIDADES = HabilidadDef(
 object Especies {
 
     val elfo = EspecieDef(
-        id = "elfo", nombre = "Elfo", mods = mapOf(DES to 1, CON to -1), pequeno = false,
+        id = "elfo", nombre = "Elfo", mods = mapOf(DES to 1, CON to -1), pequeno = false, descripcion = "Criaturas ligadas a la naturaleza, de inteligencia inquisitiva e innegable belleza. Su aparente fragilidad engaña: son duros como robles y muy ágiles.",
         idiomas = "Élfico, común, enano, orco, goblin, mediano, dracónico",
         rasgos = listOf(
             HabilidadDef("Visión en la penumbra", "Ve con poca luz como un humano a plena luz."),
@@ -42,7 +43,7 @@ object Especies {
     )
 
     val elfoOscuro = EspecieDef(
-        id = "elfo_oscuro", nombre = "Elfo oscuro", mods = mapOf(DES to 1, CON to -1), pequeno = false,
+        id = "elfo_oscuro", nombre = "Elfo oscuro", mods = mapOf(DES to 1, CON to -1), pequeno = false, descripcion = "Elfos de la sombra, taciturnos, atléticos y agraciados, de cabellos blanco níveo o gris perla. Pueden vivir más de mil años.",
         idiomas = "Élfico, común, enano, orco, goblin, mediano, dracónico",
         rasgos = listOf(
             HabilidadDef("Infravisión", "Ve en la oscuridad hasta 30 m."),
@@ -53,7 +54,7 @@ object Especies {
     )
 
     val enano = EspecieDef(
-        id = "enano", nombre = "Enano", mods = mapOf(DES to -1, CON to 1), pequeno = true,
+        id = "enano", nombre = "Enano", mods = mapOf(DES to -1, CON to 1), pequeno = true, descripcion = "Vigorosos, fuertes y de cuerpo achaparrado, de carácter vehemente y gran sentido del honor. Moran en galerías bajo las montañas.",
         idiomas = "Enano, común, gnomo, orco, goblin, mediano, ogro, gigante, trol",
         rasgos = listOf(
             HabilidadDef("Infravisión", "Ve en la oscuridad hasta 35 m."),
@@ -65,7 +66,7 @@ object Especies {
     )
 
     val gnomo = EspecieDef(
-        id = "gnomo", nombre = "Gnomo", mods = mapOf(INT to 1, FUE to -1), pequeno = true,
+        id = "gnomo", nombre = "Gnomo", mods = mapOf(INT to 1, FUE to -1), pequeno = true, descripcion = "Parientes lejanos de los enanos, más bajos que ellos. Curiosos e ingeniosos, con un don natural para la magia.",
         idiomas = "Gnomo, común, enano, élfico, mediano, kobold, goblin",
         rasgos = listOf(
             HabilidadDef("Infravisión", "Ve en la oscuridad hasta 18 m."),
@@ -76,7 +77,7 @@ object Especies {
     )
 
     val mediano = EspecieDef(
-        id = "mediano", nombre = "Mediano", mods = mapOf(DES to 1, FUE to -1), pequeno = true,
+        id = "mediano", nombre = "Mediano", mods = mapOf(DES to 1, FUE to -1), pequeno = true, descripcion = "También llamados halflings: robustos, de escaso tamaño, apacibles y hogareños, pero observadores y sorprendentemente sigilosos.",
         idiomas = "Mediano, común, enano, gnomo, élfico, goblin",
         rasgos = listOf(
             HabilidadDef("Valentía", "+2 a las TS contra miedo."),
@@ -86,14 +87,14 @@ object Especies {
     )
 
     val humano = EspecieDef(
-        id = "humano", nombre = "Humano", mods = emptyMap(), pequeno = false,
+        id = "humano", nombre = "Humano", mods = emptyMap(), pequeno = false, descripcion = "La especie más versátil y extendida, presente en todos los entornos, con culturas y folclores propios muy variados.",
         idiomas = "Común y una lengua regional",
         rasgos = listOf(HabilidadDef("Versatilidad", "Elige dos características primarias además de la de su clase.")),
         primariasExtra = 2
     )
 
     val semielfo = EspecieDef(
-        id = "semielfo", nombre = "Semielfo", mods = mapOf(DES to 1, CON to -1), pequeno = false,
+        id = "semielfo", nombre = "Semielfo", mods = mapOf(DES to 1, CON to -1), pequeno = false, descripcion = "Hijos de humanos y elfos. Heredan la gracia élfica y la versatilidad humana, y se mueven con soltura en ambos mundos.",
         idiomas = "Común, élfico, mediano, enano y una lengua regional",
         rasgos = listOf(
             HabilidadDef("Sangre élfica", "+4 a las TS contra encantamiento y sueño."),
@@ -104,7 +105,7 @@ object Especies {
     )
 
     val semiorco = EspecieDef(
-        id = "semiorco", nombre = "Semiorco", mods = mapOf(FUE to 1, CON to 1, CAR to -2), pequeno = false,
+        id = "semiorco", nombre = "Semiorco", mods = mapOf(FUE to 1, CON to 1, CAR to -2), pequeno = false, descripcion = "Fuertes y resistentes, de olfato muy aguzado. Viven a caballo entre humanos y orcos, a menudo mirados con recelo.",
         idiomas = "Común, orco, goblin y una lengua regional",
         rasgos = listOf(
             HabilidadDef("Infravisión", "Ve en la oscuridad hasta 18 m."),

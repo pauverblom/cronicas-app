@@ -5,7 +5,7 @@ table; the app keeps the sheet and fills in everything the rules derive.
 
 ## Features
 
-- **Characters:** home screen of portrait cards; step-by-step creation wizard (name and portrait, species, class with
+- **Characters:** home screen of portrait cards; step-by-step creation wizard with illustrated carousels from the rulebook (name and portrait, species, class with
   optional multiclass, 3d6 scores and primaries, HP, alignment and deity, starting gold); export and import a
   character (portrait included) as a `.cronicas.json` file.
 - **Rules, auto-filled and editable:** the 13 classes and 8 species of the rulebook (plus custom ones) give hit die,
@@ -123,6 +123,13 @@ app/src/main/java/io/github/pauverblom/cronicas/
 
 ```bash
 python3 scripts/extract_spells.py LORE/Cronicasdelamarca.pdf app/src/main/assets/conjuros.json
+```
+
+The class, species and equipment illustrations in `app/src/main/assets/ilustraciones/` come from the same PDF
+(armour, shields and helmets are cut out of their labelled plates; other items show their category plate):
+
+```bash
+python3 scripts/extract_ilustraciones.py LORE/Cronicasdelamarca.pdf app/src/main/assets/ilustraciones
 ```
 
 Rules tests live in `app/src/test` (`./gradlew testDebugUnitTest`).
