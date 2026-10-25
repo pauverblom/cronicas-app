@@ -1,6 +1,7 @@
 package io.github.pauverblom.cronicas.ui
 
 import android.app.Application
+import android.content.Context
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.pauverblom.cronicas.CronicasApp
@@ -56,7 +57,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val repo: Repository = app.repository
     private val undoManager = UndoManager(repo)
 
-    private val _currentPersonajeId = MutableStateFlow(1L)
+    // Remembers the selected character across launches. It used to be hardcoded to 1 (the seeded
+    // character), which left the app empty and uneditable once that character was deleted.
+    private val prefs = application.getSharedPreferences("cronicas", Context.MODE_PRIVATE)
+    private val _currentPersonajeId = MutableStateFlow(prefs.getLong(KEY_SELECTED_PERSONAJE, 1L))
 
     private val _uiState = MutableStateFlow(MesaUiState())
     val uiState: StateFlow<MesaUiState> = _uiState.asStateFlow()
@@ -73,6 +77,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 launch {
                     repo.allPersonajes().collect { list ->
                         val p = list.firstOrNull { it.id == pid }
+                        if (p == null && list.isNotEmpty()) {
+                            // Selected character no longer exists: fall back to the first one.
+                            selectCharacter(list.first().id)
+                            return@collect
+                        }
                         _uiState.update { it.copy(personaje = p, allPersonajes = list, loading = false) }
                     }
                 }
@@ -433,7 +442,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // ── Personajes ──
 
     fun switchCharacter(newPid: Long) {
+        selectCharacter(newPid)
+    }
+
+    private fun selectCharacter(newPid: Long) {
         _currentPersonajeId.value = newPid
+        prefs.edit().putLong(KEY_SELECTED_PERSONAJE, newPid).apply()
     }
 
     fun createCharacter(
@@ -474,7 +488,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 )
             )
             repo.upsertTesoro(Tesoro(personajeId = newPid))
-            _currentPersonajeId.value = newPid
+            selectCharacter(newPid)
             showSnackbar("$nombre creado")
         }
     }
@@ -494,7 +508,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
             repo.deletePersonaje(personaje)
             val remaining = allPjs.filter { it.id != personaje.id }
-            _currentPersonajeId.value = remaining.first().id
+            selectCharacter(remaining.first().id)
             showSnackbar("${personaje.nombre} eliminado")
         }
     }
@@ -558,5 +572,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun clearSnackbar() {
         _uiState.update { it.copy(snackbarMessage = null) }
+    }
+
+    private companion object {
+        const val KEY_SELECTED_PERSONAJE = "selected_personaje_id"
     }
 }
