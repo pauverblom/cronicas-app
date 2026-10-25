@@ -51,21 +51,39 @@ jobs:
             exit 1
           fi
 
+      # Sign a throwaway jar with the same alias/passwords Gradle will use, so a bad
+      # secret fails here with a clear message instead of at the end of the build.
       - name: Verify signing key
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
-          if ! keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" > /dev/null; then
-            echo "::error::Could not open the keystore with KEYSTORE_PASSWORD, or it has no key named KEY_ALIAS."
+          KS="$RUNNER_TEMP/release.jks"
+          KEY_ALIAS="$(printf '%s' "$KEY_ALIAS" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          KEY_PASSWORD="${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+          if ! keytool -list -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" > "$RUNNER_TEMP/keys.txt" 2>&1; then
+            echo "::error::Could not open the keystore: KEYSTORE_PASSWORD is wrong or KEYSTORE_BASE64 is not the .jks file."
             exit 1
           fi
+          echo "Keys in the keystore:"
+          grep -i "PrivateKeyEntry" "$RUNNER_TEMP/keys.txt" | cut -d, -f1 | sed 's/^/  /'
+          echo probe > "$RUNNER_TEMP/probe.txt"
+          jar cf "$RUNNER_TEMP/probe.jar" -C "$RUNNER_TEMP" probe.txt
+          if ! jarsigner -keystore "$KS" -storepass "$KEYSTORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              "$RUNNER_TEMP/probe.jar" "$KEY_ALIAS" > "$RUNNER_TEMP/jarsigner.txt" 2>&1; then
+            cat "$RUNNER_TEMP/jarsigner.txt"
+            echo "::error::Could not sign with key KEY_ALIAS. Either KEY_ALIAS is not one of the keys listed above, or the key has its own password: add it as the KEY_PASSWORD secret."
+            exit 1
+          fi
+          echo "Signing key OK"
 
       - name: Build signed APK
         env:
           CRONICAS_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
           CRONICAS_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           CRONICAS_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          CRONICAS_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: >
           ./gradlew assembleRelease
           -PversionName=${{ steps.version.outputs.name }}

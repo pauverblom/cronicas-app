@@ -28,8 +28,11 @@ android {
             create("release") {
                 storeFile = file(releaseKeystore)
                 storePassword = System.getenv("CRONICAS_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("CRONICAS_KEY_ALIAS")
-                keyPassword = System.getenv("CRONICAS_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("CRONICAS_KEY_ALIAS")?.trim()
+                // Keys made with keytool -storetype PKCS12 share the store password;
+                // Android Studio's wizard can give the key its own (CRONICAS_KEY_PASSWORD).
+                keyPassword = System.getenv("CRONICAS_KEY_PASSWORD").takeUnless { it.isNullOrEmpty() }
+                    ?: System.getenv("CRONICAS_KEYSTORE_PASSWORD")
             }
         }
     }

@@ -59,7 +59,8 @@ The workflow builds `cronicas-marca-v0.2.0.apk`, signs it with the release key a
 `versionName` comes from the tag (`0.2.0`), and `versionCode` is `MAJOR*10000 + MINOR*100 + PATCH`. Tags must
 therefore always increase. Android refuses to install an update with a lower `versionCode`.
 
-The signing key lives only in the repository secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`) and in
+The signing key lives only in the repository secrets (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and
+`KEY_PASSWORD` if the key has its own password) and in
 the maintainer's offline backup. **If it is lost, existing installs can't be updated.** Everyone would have to
 uninstall (losing their data) and reinstall.
 
