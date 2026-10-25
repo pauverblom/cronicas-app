@@ -1,0 +1,66 @@
+name: Release
+
+# Push a tag like v0.2.0 to build a signed APK and publish it as a GitHub Release.
+# Obtainium picks up the release and offers the update.
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compute version from tag
+        id: version
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          if ! [[ "$TAG" =~ ^v([0-9]+)\.([0-9]{1,2})\.([0-9]{1,2})$ ]]; then
+            echo "::error::Tag '$TAG' must look like vMAJOR.MINOR.PATCH (minor/patch < 100)"
+            exit 1
+          fi
+          NAME="${TAG#v}"
+          CODE=$(( 10#${BASH_REMATCH[1]} * 10000 + 10#${BASH_REMATCH[2]} * 100 + 10#${BASH_REMATCH[3]} ))
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "versionName=$NAME versionCode=$CODE"
+
+      - name: Decode signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Repository secret KEYSTORE_BASE64 is not set"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+
+      - name: Build signed APK
+        env:
+          CRONICAS_KEYSTORE_PATH: ${{ runner.temp }}/release.jks
+          CRONICAS_KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          CRONICAS_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        run: >
+          ./gradlew assembleRelease
+          -PversionName=${{ steps.version.outputs.name }}
+          -PversionCode=${{ steps.version.outputs.code }}
+
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          APK="cronicas-marca-${GITHUB_REF_NAME}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          gh release create "$GITHUB_REF_NAME" "$APK" --title "$GITHUB_REF_NAME" --generate-notes

@@ -6,20 +6,39 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+// Release signing comes from environment variables (set by the release workflow from repo secrets).
+// Without them, assembleRelease produces an unsigned APK.
+val releaseKeystore: String? = System.getenv("CRONICAS_KEYSTORE_PATH")
+
 android {
-    namespace = "com.example.cronicasmarca"
+    namespace = "io.github.pauverblom.cronicas"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.cronicasmarca"
+        applicationId = "io.github.pauverblom.cronicas"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        // Overridden by CI from the release tag: -PversionName=1.2.3 -PversionCode=10203
+        versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = (findProperty("versionName") as String?) ?: "0.1.0"
+    }
+
+    signingConfigs {
+        if (releaseKeystore != null) {
+            create("release") {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("CRONICAS_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("CRONICAS_KEY_ALIAS")
+                keyPassword = System.getenv("CRONICAS_KEYSTORE_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
+            if (releaseKeystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
