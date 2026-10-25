@@ -318,14 +318,16 @@ fun HpBlock(combate: EstadoCombate, viewModel: MainViewModel, onDamageClick: () 
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val canLose = combate.pgActuales > 0
                 OutlinedButton(
                     onClick = { viewModel.changePg(-1) },
+                    enabled = canLose,
                     modifier = Modifier.size(52.dp),
                     shape = CircleShape,
-                    border = BorderStroke(1.dp, HpRed.copy(alpha = 0.6f)),
+                    border = BorderStroke(1.dp, HpRed.copy(alpha = if (canLose) 0.6f else 0.2f)),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("-1", color = HpRed, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("-1", color = HpRed.copy(alpha = if (canLose) 1f else 0.35f), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
 
                 Button(
@@ -344,14 +346,16 @@ fun HpBlock(combate: EstadoCombate, viewModel: MainViewModel, onDamageClick: () 
                     Text("Daño / Curación", fontSize = 14.sp)
                 }
 
+                val canHeal = combate.pgActuales < combate.pgMaximos
                 OutlinedButton(
                     onClick = { viewModel.changePg(1) },
+                    enabled = canHeal,
                     modifier = Modifier.size(52.dp),
                     shape = CircleShape,
-                    border = BorderStroke(1.dp, HpNormal.copy(alpha = 0.6f)),
+                    border = BorderStroke(1.dp, HpNormal.copy(alpha = if (canHeal) 0.6f else 0.2f)),
                     contentPadding = PaddingValues(0.dp)
                 ) {
-                    Text("+1", color = HpNormal, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("+1", color = HpNormal.copy(alpha = if (canHeal) 1f else 0.35f), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                 }
             }
         }

@@ -143,11 +143,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     // ── PG ──
 
+    /** PG actuales siempre entre 0 y los PG máximos del personaje. */
+    private fun clampPg(value: Int, combate: EstadoCombate): Int =
+        value.coerceIn(0, combate.pgMaximos.coerceAtLeast(0))
+
     fun changePg(delta: Int) {
         viewModelScope.launch {
             val current = _uiState.value.combate ?: return@launch
+            val newPg = clampPg(current.pgActuales + delta, current)
+            if (newPg == current.pgActuales) {
+                showSnackbar(if (delta > 0) "PG ya al máximo (${current.pgMaximos})" else "PG ya a 0")
+                return@launch
+            }
             undoManager.pushPgChange(pid, current.pgActuales)
-            val newPg = current.pgActuales + delta
             repo.updatePg(pid, newPg)
             showSnackbar("PG: ${current.pgActuales} → $newPg")
         }
@@ -156,8 +164,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun setPg(value: Int) {
         viewModelScope.launch {
             val current = _uiState.value.combate ?: return@launch
+            val newPg = clampPg(value, current)
+            if (newPg == current.pgActuales) return@launch
             undoManager.pushPgChange(pid, current.pgActuales)
-            repo.updatePg(pid, value)
+            repo.updatePg(pid, newPg)
         }
     }
 
@@ -354,7 +364,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (combate.danoAtenuado > 0) {
                 val newDa = combate.danoAtenuado - 1
                 repo.updateDanoAtenuado(pid, newDa)
-                val newPg = combate.pgActuales + 1
+                val newPg = clampPg(combate.pgActuales + 1, combate)
                 repo.updatePg(pid, newPg)
                 showSnackbar("Daño atenuado: recuperas 1 PG (${combate.danoAtenuado}→$newDa)")
             }
