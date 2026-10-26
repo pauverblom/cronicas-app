@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import io.github.pauverblom.cronicas.data.AjustesApp
 import io.github.pauverblom.cronicas.ui.AppNavigation
+import io.github.pauverblom.cronicas.ui.hud.Noche
 import io.github.pauverblom.cronicas.ui.theme.CronicasMarcaTheme
 import io.github.pauverblom.cronicas.ui.theme.esTemaOscuro
 
@@ -30,7 +31,7 @@ class MainActivity : ComponentActivity() {
                 onDispose {}
             }
             CronicasMarcaTheme(ajustes) {
-                AppNavigation(ajustes)
+                Noche { AppNavigation(ajustes) }
             }
         }
     }

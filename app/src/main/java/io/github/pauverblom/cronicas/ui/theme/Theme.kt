@@ -15,152 +15,286 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
 import com.materialkolor.dynamicColorScheme
 import io.github.pauverblom.cronicas.data.AjustesApp
 import io.github.pauverblom.cronicas.data.Modo
 import io.github.pauverblom.cronicas.data.Tema
 import io.github.pauverblom.cronicas.rules.Atributo
 
-// ── Paleta "pergamino y oro" (tema oscuro) ──
-private val Parchment = Color(0xFFF5E6C8)
-private val ParchmentDark = Color(0xFF2A2318)
-private val ParchmentSurface = Color(0xFF342B1E)
-private val ParchmentSurfaceVariant = Color(0xFF3E3428)
-private val GoldAccent = Color(0xFFD4A853)
-private val GoldLight = Color(0xFFE8C97A)
-private val GoldDim = Color(0xFF8B7340)
-private val ArcaneBlue = Color(0xFF7BA4DB)
-private val ArcanePurple = Color(0xFFB48EDB)
-private val BloodRed = Color(0xFFCC3333)
-private val SilverText = Color(0xFFD4D0C8)
-
-private val PergaminoOscuro = darkColorScheme(
-    primary = GoldAccent,
-    onPrimary = ParchmentDark,
-    primaryContainer = Color(0xFF4A3D20),
-    onPrimaryContainer = GoldLight,
-    secondary = ArcaneBlue,
-    onSecondary = ParchmentDark,
-    secondaryContainer = Color(0xFF2A3A4D),
-    onSecondaryContainer = ArcaneBlue,
-    tertiary = ArcanePurple,
-    onTertiary = ParchmentDark,
-    tertiaryContainer = Color(0xFF3D2F4D),
-    onTertiaryContainer = Color(0xFFE2CCF5),
-    background = ParchmentDark,
-    onBackground = Parchment,
-    surface = ParchmentDark,
-    onSurface = Parchment,
-    surfaceVariant = ParchmentSurfaceVariant,
-    onSurfaceVariant = SilverText,
-    surfaceContainerLowest = Color(0xFF1F1A12),
-    surfaceContainerLow = Color(0xFF2F271B),
-    surfaceContainer = ParchmentSurface,
-    surfaceContainerHigh = Color(0xFF3A3022),
-    surfaceContainerHighest = Color(0xFF443828),
-    error = BloodRed,
-    onError = Parchment,
-    errorContainer = Color(0xFF4A1A1A),
-    onErrorContainer = Color(0xFFFFAAAA),
-    outline = GoldDim,
-    outlineVariant = Color(0xFF4A4030)
-)
-
-// ── Pergamino claro: papel crema, tinta marrón y acentos rojos, como la ficha impresa ──
-private val Ink = Color(0xFF2E2216)
-private val Cream = Color(0xFFF6EBD3)
-
-private val PergaminoClaro = lightColorScheme(
-    primary = Color(0xFF8E2A1C),
-    onPrimary = Color(0xFFFFF8EE),
-    primaryContainer = Color(0xFFF3D2C4),
-    onPrimaryContainer = Color(0xFF3B0A03),
-    secondary = Color(0xFF6B4E2E),
-    onSecondary = Color(0xFFFFF8EE),
-    secondaryContainer = Color(0xFFEBD9BC),
-    onSecondaryContainer = Color(0xFF2A1A08),
-    tertiary = Color(0xFF3D5A78),
-    onTertiary = Color(0xFFFFFFFF),
-    tertiaryContainer = Color(0xFFD3E2F2),
-    onTertiaryContainer = Color(0xFF0E2236),
-    background = Cream,
-    onBackground = Ink,
-    surface = Cream,
-    onSurface = Ink,
-    surfaceVariant = Color(0xFFE8D9BC),
-    onSurfaceVariant = Color(0xFF52432F),
-    surfaceContainerLowest = Color(0xFFFFFAF0),
-    surfaceContainerLow = Color(0xFFFBF2DF),
-    surfaceContainer = Color(0xFFF1E4C8),
-    surfaceContainerHigh = Color(0xFFEBDCBE),
-    surfaceContainerHighest = Color(0xFFE4D3B3),
-    error = Color(0xFFB3261E),
-    onError = Color(0xFFFFFFFF),
-    errorContainer = Color(0xFFF9DEDC),
-    onErrorContainer = Color(0xFF410E0B),
-    outline = Color(0xFF8A7558),
-    outlineVariant = Color(0xFFD2C0A0)
-)
-
-/** Colores de la ficha que no forman parte de Material: PG y características. */
+/**
+ * Colores del sistema de diseño «Crónicas de la Marca» (tokens.json). Los nombres siguen los del sistema:
+ * fondos de atrás hacia delante (noche → vitela 100 → 200 → 300), tintas, el metal dorado y el hierro de los
+ * marcos, y los colores con significado (PG, características, avisos, magia).
+ */
 @Immutable
-data class ColoresHoja(
-    val pgBien: Color,
-    val pgMedio: Color,
-    val pgMal: Color,
-    val pgCero: Color,
+data class Paleta(
+    val oscuro: Boolean,
+    /** Fondo de la página, detrás de todo. */
+    val noche: Color,
+    /** Resplandor translúcido que se acumula sobre la noche. */
+    val bruma: Color,
+    /** Motas sobre la noche: estrellas en oscuro, fibras del papel en claro. */
+    val estrella: Color,
+    /** Cristal oscuro dentro de ventanas y diálogos. */
+    val vitela100: Color,
+    /** Elementos elevados dentro de una ventana; arriba del degradado del cristal. */
+    val vitela200: Color,
+    /** Pozos: pistas de barras, campos, interiores de placas, la bandeja de monedas. */
+    val vitela300: Color,
+    /** Filete que se desvanece entre filas. Solo decorativo. */
+    val regla: Color,
+    /** Línea dorada plana donde no cabe un degradado. */
+    val dorado: Color,
+    val metalAlto: Color,
+    val metalMedio: Color,
+    val metalBajo: Color,
+    val hierroAlto: Color,
+    val hierro: Color,
+    val hierroBajo: Color,
+    val tinta: Color,
+    val tintaSuave: Color,
+    /** Solo para deshabilitado y textos de ejemplo (no llega a 4.5:1 a propósito). */
+    val tintaTenue: Color,
+    /** El oro como texto y marca: títulos de placa, estrellas, pestaña activa, BA. */
+    val oro: Color,
+    val oroBrillo: Color,
+    val oroRelleno: Color,
+    val sobreOro: Color,
+    val sangre: Color,
+    val sangreRelleno: Color,
+    val sobreSangre: Color,
+    val azulArcano: Color,
+    /** Reservado para la marca de valor fijado a mano. */
+    val violetaArcano: Color,
+    val alerta: Color,
+    val alertaSuave: Color,
+    val peligroSuave: Color,
+    val foco: Color,
+    val grabadoAlto: Color,
+    val grabadoBajo: Color,
+    val brilloCristal: Color,
+    val velo: Color,
+    val pgSano: Color,
+    val pgHerido: Color,
+    val pgCritico: Color,
+    val pgNinguno: Color,
     val atributos: Map<Atributo, Color>
-)
+) {
+    fun atributo(a: Atributo): Color = atributos.getValue(a)
+}
 
-private val ColoresOscuro = ColoresHoja(
-    pgBien = Color(0xFF6ABF6A),
-    pgMedio = Color(0xFFE8B84A),
-    pgMal = Color(0xFFE05050),
-    pgCero = Color(0xFF6B6560),
+/** Colores iguales en los dos temas: papel de las ilustraciones, caras de las monedas. */
+object ColoresFijos {
+    val papelArte = Color(0xFFF2E6CB)
+    val tintaArte = Color(0xFF3B2A1A)
+    val arteFaltante = Color(0xFF9C2A1E)
+    val monedaPlatino = Color(0xFFDFE3EA)
+    val monedaOro = Color(0xFFE2B84A)
+    val monedaElectro = Color(0xFFCDBF78)
+    val monedaPlata = Color(0xFFB9BDC2)
+    val monedaCobre = Color(0xFFC4743F)
+}
+
+/** Fuerza de la textura grabada (tex-runes, tex-grain, tex-glow). */
+object Textura {
+    const val RUNAS = 0.12f
+    const val GRANO = 0.04f
+    const val BRILLO = 0.07f
+}
+
+val PergaminoOscuro = Paleta(
+    oscuro = true,
+    noche = Color(0xFF07080E),
+    bruma = Color(0x4D2848A8),
+    estrella = Color(0xFFD7E0FF),
+    vitela100 = Color(0xFF0F1019),
+    vitela200 = Color(0xFF171824),
+    vitela300 = Color(0xFF040509),
+    regla = Color(0xFF2C2D3C),
+    dorado = Color(0xFFA07C3C),
+    metalAlto = Color(0xFFF6DC9A),
+    metalMedio = Color(0xFFD4A553),
+    metalBajo = Color(0xFF7D5A22),
+    hierroAlto = Color(0xFFA3A9B6),
+    hierro = Color(0xFF6A707E),
+    hierroBajo = Color(0xFF2A2D36),
+    tinta = Color(0xFFF1E8D4),
+    tintaSuave = Color(0xFFADA391),
+    tintaTenue = Color(0xFF6B6A74),
+    oro = Color(0xFFDDAC4C),
+    oroBrillo = Color(0xFFF6D382),
+    oroRelleno = Color(0xFFC99634),
+    sobreOro = Color(0xFF1A0F04),
+    sangre = Color(0xFFEA6253),
+    sangreRelleno = Color(0xFF9E2A1F),
+    sobreSangre = Color(0xFFFFF1E8),
+    azulArcano = Color(0xFF7EA9E6),
+    violetaArcano = Color(0xFFB49CF0),
+    alerta = Color(0xFFF0A640),
+    alertaSuave = Color(0xFF241A0C),
+    peligroSuave = Color(0xFF2A1012),
+    foco = Color(0xFFF6D382),
+    grabadoAlto = Color(0xFF9C7A3C),
+    grabadoBajo = Color(0xFF000000),
+    brilloCristal = Color(0x59FFFFFF),
+    velo = Color(0xB8000000),
+    pgSano = Color(0xFF9CCF6F),
+    pgHerido = Color(0xFFE9B04A),
+    pgCritico = Color(0xFFEE5E4B),
+    pgNinguno = Color(0xFF857866),
     atributos = mapOf(
-        Atributo.FUE to Color(0xFFE07A5A),
-        Atributo.DES to Color(0xFF6CC06C),
-        Atributo.CON to Color(0xFFD9A441),
-        Atributo.INT to Color(0xFF6F9BE0),
-        Atributo.SAB to Color(0xFFB3B3E6),
-        Atributo.CAR to Color(0xFFD86CB8)
+        Atributo.FUE to Color(0xFFF2804F),
+        Atributo.DES to Color(0xFF7FCB7A),
+        Atributo.CON to Color(0xFFE8B54C),
+        Atributo.INT to Color(0xFF7AAAF2),
+        Atributo.SAB to Color(0xFFBEA8F0),
+        Atributo.CAR to Color(0xFFEA80C4)
     )
 )
 
-private val ColoresClaro = ColoresHoja(
-    pgBien = Color(0xFF2E7D32),
-    pgMedio = Color(0xFFB26A00),
-    pgMal = Color(0xFFC62828),
-    pgCero = Color(0xFF757575),
+val PergaminoClaro = Paleta(
+    oscuro = false,
+    noche = Color(0xFFECDFC2),
+    bruma = Color(0x66FFFAF0),
+    estrella = Color(0xFFC9B48A),
+    vitela100 = Color(0xFFF5EAD2),
+    vitela200 = Color(0xFFFBF3E2),
+    vitela300 = Color(0xFFE4D2AE),
+    regla = Color(0xFFCDB48B),
+    dorado = Color(0xFF8A6630),
+    metalAlto = Color(0xFFE2C06E),
+    metalMedio = Color(0xFFB07F2A),
+    metalBajo = Color(0xFF5E3F0C),
+    hierroAlto = Color(0xFF8D8F96),
+    hierro = Color(0xFF55565E),
+    hierroBajo = Color(0xFF3A3A40),
+    tinta = Color(0xFF2A1C10),
+    tintaSuave = Color(0xFF5C4630),
+    tintaTenue = Color(0xFF94806A),
+    oro = Color(0xFF72500E),
+    oroBrillo = Color(0xFFA8741A),
+    oroRelleno = Color(0xFFB8862C),
+    sobreOro = Color(0xFF1A0F04),
+    sangre = Color(0xFF9C2A1E),
+    sangreRelleno = Color(0xFF9C2A1E),
+    sobreSangre = Color(0xFFFFF4EE),
+    azulArcano = Color(0xFF2B5B98),
+    violetaArcano = Color(0xFF5B3E9A),
+    alerta = Color(0xFF824700),
+    alertaSuave = Color(0xFFF7E2C0),
+    peligroSuave = Color(0xFFF6D9D2),
+    foco = Color(0xFF1F4F94),
+    grabadoAlto = Color(0xFFFFFAF0),
+    grabadoBajo = Color(0xFF8A6630),
+    brilloCristal = Color(0x66FFFFFF),
+    velo = Color(0xA62A1C10),
+    pgSano = Color(0xFF33621A),
+    pgHerido = Color(0xFF7C4D00),
+    pgCritico = Color(0xFFA3241A),
+    pgNinguno = Color(0xFF7D7060),
     atributos = mapOf(
-        Atributo.FUE to Color(0xFFB0472A),
-        Atributo.DES to Color(0xFF2F7D32),
-        Atributo.CON to Color(0xFF9A6A00),
-        Atributo.INT to Color(0xFF2F5FA8),
-        Atributo.SAB to Color(0xFF5A5AA0),
-        Atributo.CAR to Color(0xFFA0367F)
+        Atributo.FUE to Color(0xFF963813),
+        Atributo.DES to Color(0xFF276128),
+        Atributo.CON to Color(0xFF784E06),
+        Atributo.INT to Color(0xFF26559B),
+        Atributo.SAB to Color(0xFF5D45A2),
+        Atributo.CAR to Color(0xFF962A74)
     )
 )
 
-val LocalColoresHoja = staticCompositionLocalOf { ColoresOscuro }
+val LocalPaleta = staticCompositionLocalOf { PergaminoOscuro }
 
-val CronicasTypography = Typography(
-    displayLarge = TextStyle(fontSize = 57.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.25).sp),
-    headlineLarge = TextStyle(fontSize = 28.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp),
-    headlineMedium = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp),
-    titleLarge = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.15.sp),
-    titleMedium = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.15.sp),
-    titleSmall = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.1.sp),
-    bodyLarge = TextStyle(fontSize = 16.sp, letterSpacing = 0.5.sp),
-    bodyMedium = TextStyle(fontSize = 14.sp, letterSpacing = 0.25.sp),
-    bodySmall = TextStyle(fontSize = 12.sp, letterSpacing = 0.4.sp),
-    labelLarge = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp),
-    labelMedium = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.5.sp)
-)
+/** Acceso corto a los tokens: `Marca.colores.oro`. */
+object Marca {
+    val colores: Paleta
+        @Composable get() = LocalPaleta.current
+}
+
+private fun contraste(a: Color, b: Color): Float {
+    val la = a.luminance() + 0.05f
+    val lb = b.luminance() + 0.05f
+    return maxOf(la, lb) / minOf(la, lb)
+}
+
+/**
+ * Lleva un esquema generado (Material You o el color del retrato) a los papeles del sistema y conserva los
+ * colores con significado del pergamino del mismo modo. Si la tinta no llega a 4.5:1 sobre algún fondo,
+ * devuelve el pergamino tal cual.
+ */
+private fun paletaDesde(s: ColorScheme, base: Paleta): Paleta {
+    val o = base.oscuro
+    val p = s.primary
+    val generada = base.copy(
+        noche = if (o) lerp(s.surfaceContainerLowest, Color.Black, 0.35f) else s.surfaceContainerHighest,
+        bruma = p.copy(alpha = if (o) 0.22f else 0.3f),
+        estrella = if (o) lerp(s.onSurface, p, 0.3f) else s.outlineVariant,
+        vitela100 = if (o) s.surfaceContainerLow else s.surfaceContainerLow,
+        vitela200 = if (o) s.surfaceContainer else s.surfaceContainerLowest,
+        vitela300 = if (o) lerp(s.surfaceContainerLowest, Color.Black, 0.6f) else s.surfaceContainerHigh,
+        regla = s.outlineVariant,
+        dorado = lerp(p, s.surface, 0.35f),
+        metalAlto = lerp(p, Color.White, 0.45f),
+        metalMedio = p,
+        metalBajo = lerp(p, Color.Black, 0.55f),
+        hierroAlto = lerp(s.outline, Color.White, 0.3f),
+        hierro = s.outline,
+        hierroBajo = lerp(s.outline, Color.Black, 0.5f),
+        tinta = s.onSurface,
+        tintaSuave = s.onSurfaceVariant,
+        tintaTenue = s.outline,
+        oro = p,
+        oroBrillo = lerp(p, if (o) Color.White else Color.Black, 0.3f),
+        oroRelleno = if (o) p else lerp(p, Color.White, 0.25f),
+        sobreOro = if (o) s.onPrimary else lerp(s.onPrimaryContainer, Color.Black, 0.4f),
+        foco = if (o) lerp(p, Color.White, 0.3f) else p,
+        grabadoAlto = if (o) lerp(p, Color.Black, 0.35f) else Color(0xFFFFFAF0),
+        grabadoBajo = if (o) Color.Black else lerp(p, Color.Black, 0.4f)
+    )
+    val fondos = listOf(generada.noche, generada.vitela100, generada.vitela200, generada.vitela300)
+    val legible = fondos.all { contraste(generada.tinta, it) >= 4.5f && contraste(generada.tintaSuave, it) >= 4.5f }
+    return if (legible) generada else base
+}
+
+/** Esquema de Material con los colores del sistema, para lo que aún dibuja Material (menús, hojas, selección de texto). */
+private fun esquemaMaterial(c: Paleta): ColorScheme {
+    val base = if (c.oscuro) darkColorScheme() else lightColorScheme()
+    return base.copy(
+        primary = c.oro,
+        onPrimary = c.sobreOro,
+        primaryContainer = c.vitela200,
+        onPrimaryContainer = c.oro,
+        secondary = c.azulArcano,
+        onSecondary = c.vitela300,
+        secondaryContainer = c.vitela200,
+        onSecondaryContainer = c.azulArcano,
+        tertiary = c.violetaArcano,
+        onTertiary = c.vitela300,
+        background = c.noche,
+        onBackground = c.tinta,
+        surface = c.vitela100,
+        onSurface = c.tinta,
+        surfaceVariant = c.vitela200,
+        onSurfaceVariant = c.tintaSuave,
+        surfaceContainerLowest = c.vitela300,
+        surfaceContainerLow = c.vitela100,
+        surfaceContainer = c.vitela100,
+        surfaceContainerHigh = c.vitela200,
+        surfaceContainerHighest = c.vitela200,
+        surfaceTint = c.oro,
+        inverseSurface = c.tinta,
+        inverseOnSurface = c.vitela100,
+        error = c.sangre,
+        onError = c.sobreSangre,
+        errorContainer = c.peligroSuave,
+        onErrorContainer = c.sangre,
+        outline = c.hierro,
+        outlineVariant = c.regla,
+        scrim = c.velo
+    )
+}
 
 /** Los temas pergamino son fijos; el resto sigue el modo elegido (o el del sistema). */
 @Composable
@@ -190,18 +324,32 @@ fun CronicasMarcaTheme(
     val oscuro = esTemaOscuro(ajustes)
     val context = LocalContext.current
     val pergamino = if (oscuro) PergaminoOscuro else PergaminoClaro
-    val scheme: ColorScheme = when (ajustes.tema) {
+    val paleta: Paleta = when (ajustes.tema) {
         Tema.PERGAMINO_OSCURO -> PergaminoOscuro
         Tema.PERGAMINO_CLARO -> PergaminoClaro
         Tema.MATERIAL_YOU ->
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                if (oscuro) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+                remember(oscuro) {
+                    paletaDesde(if (oscuro) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context), pergamino)
+                }
             } else pergamino
         Tema.RETRATO -> semilla?.let { seed ->
-            remember(seed, oscuro) { dynamicColorScheme(seedColor = Color(seed), isDark = oscuro, isAmoled = false) }
+            remember(seed, oscuro) {
+                paletaDesde(dynamicColorScheme(seedColor = Color(seed), isDark = oscuro, isAmoled = false), pergamino)
+            }
         } ?: pergamino
     }
-    CompositionLocalProvider(LocalColoresHoja provides if (oscuro) ColoresOscuro else ColoresClaro) {
-        MaterialTheme(colorScheme = scheme, typography = CronicasTypography, content = content)
+    val esquema = remember(paleta) { esquemaMaterial(paleta) }
+    CompositionLocalProvider(LocalPaleta provides paleta) {
+        MaterialTheme(colorScheme = esquema, typography = TipografiaMaterial, content = content)
     }
 }
+
+/** Tipografía de Material para lo que aún dibuja Material (menús desplegables, selección de texto). */
+private val TipografiaMaterial = Typography(
+    bodyLarge = Tipos.ui,
+    bodyMedium = Tipos.uiSm,
+    bodySmall = Tipos.caption,
+    labelLarge = Tipos.ui,
+    titleMedium = Tipos.ui
+)

@@ -37,7 +37,11 @@ data class DesgloseCa(
     val otros: Int,
     val casco: Int,
     val total: Int,
-    val forzada: Boolean
+    val forzada: Boolean,
+    /** Nombres de lo que se lleva puesto, para el «Tipo» de la ficha. */
+    val nombreArmadura: String? = null,
+    val nombreEscudo: String? = null,
+    val nombreCasco: String? = null
 )
 
 data class LineaAtaque(val modo: String, val ba: Int, val dano: String, val alcance: Int? = null)
@@ -177,7 +181,8 @@ object Hoja {
         val caCalculada = caBase + caArmadura + caDes + caEscudo + magia.coerceAtLeast(0) + e.caOtros
         val ca = DesgloseCa(
             caBase, caArmadura, caDes, caEscudo, magia.coerceAtLeast(0), e.caOtros, caCasco,
-            e.caOverride ?: caCalculada, e.caOverride != null
+            e.caOverride ?: caCalculada, e.caOverride != null,
+            armadura?.nombre, escudo?.nombre, casco?.nombre
         )
 
         // ── Movimiento ──

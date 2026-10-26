@@ -3,48 +3,20 @@ package io.github.pauverblom.cronicas.ui.hoja
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Bedtime
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -55,9 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.pauverblom.cronicas.data.Conjuro
 import io.github.pauverblom.cronicas.data.ConjuroConDetalle
 import io.github.pauverblom.cronicas.rules.MagiaHoja
@@ -65,6 +35,23 @@ import io.github.pauverblom.cronicas.ui.common.CampoNumero
 import io.github.pauverblom.cronicas.ui.common.ConfirmarDialog
 import io.github.pauverblom.cronicas.ui.common.FormularioDialog
 import io.github.pauverblom.cronicas.ui.common.NumeroDialog
+import io.github.pauverblom.cronicas.ui.hud.Boton
+import io.github.pauverblom.cronicas.ui.hud.BotonIcono
+import io.github.pauverblom.cronicas.ui.hud.Campo
+import io.github.pauverblom.cronicas.ui.hud.Casilla
+import io.github.pauverblom.cronicas.ui.hud.Contador
+import io.github.pauverblom.cronicas.ui.hud.EntradaConjuro
+import io.github.pauverblom.cronicas.ui.hud.EspacioNivel
+import io.github.pauverblom.cronicas.ui.hud.EspaciosConjuro
+import io.github.pauverblom.cronicas.ui.hud.Etiqueta
+import io.github.pauverblom.cronicas.ui.hud.Filete
+import io.github.pauverblom.cronicas.ui.hud.Glifo
+import io.github.pauverblom.cronicas.ui.hud.IconoGlifo
+import io.github.pauverblom.cronicas.ui.hud.Tono
+import io.github.pauverblom.cronicas.ui.hud.Variante
+import io.github.pauverblom.cronicas.ui.hud.Ventana
+import io.github.pauverblom.cronicas.ui.theme.Marca
+import io.github.pauverblom.cronicas.ui.theme.Tipos
 
 /** [LISTA_PROPIA] guarda el nivel de los conjuros creados sin lista de clase. */
 private val NOMBRE_LISTA = mapOf("clerigo" to "Clérigo", "druida" to "Druida", "ilusionista" to "Ilusionista", "mago" to "Mago", LISTA_PROPIA to "Nivel")
@@ -78,26 +65,32 @@ fun MagiaTab(ui: HojaUi, vm: HojaViewModel) {
     var descanso by remember { mutableStateOf(false) }
     var forzar by remember { mutableStateOf<Pair<MagiaHoja, Int>?>(null) }
     val catalogo by vm.catalogoConjuros.collectAsState()
+    val buscador = rememberBuscador(ui, vm)
 
-    Column(Modifier.fillMaxSize()) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            ui.hoja.magia.forEach { m -> FilaEspacios(m, ui.conjuros, onForzar = { nivel -> forzar = m to nivel }) }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SingleChoiceSegmentedButtonRow(Modifier.weight(1f)) {
-                    Vista.entries.forEachIndexed { i, v ->
-                        SegmentedButton(selected = vista == v, onClick = { vista = v }, shape = SegmentedButtonDefaults.itemShape(i, Vista.entries.size)) {
-                            Text(v.titulo, fontSize = 12.sp)
-                        }
-                    }
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 48.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
+    ) {
+        item(key = "espacios") {
+            Ventana("Espacios de conjuro") {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    ui.hoja.magia.forEach { m -> FilaEspacios(m, ui.conjuros, onForzar = { nivel -> forzar = m to nivel }) }
                 }
-                IconButton(onClick = { descanso = true }) { Icon(Icons.Default.Bedtime, "Descanso") }
+                Boton("Descansar", { descanso = true }, Modifier.align(Alignment.CenterHorizontally).padding(top = 16.dp), variante = Variante.DORADO)
+            }
+        }
+        item(key = "vistas") {
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally)) {
+                Vista.entries.forEach { v -> Etiqueta(v.titulo, tono = if (vista == v) Tono.ORO else Tono.LISO, onClick = { vista = v }) }
             }
         }
         when (vista) {
-            Vista.PREPARADOS -> ListaPreparados(ui, vm)
-            Vista.GRIMORIO -> ListaGrimorio(ui, vm)
-            Vista.CATALOGO -> ListaCatalogo(ui, vm, catalogo)
+            Vista.PREPARADOS -> listaPreparados(ui, vm)
+            Vista.GRIMORIO -> listaGrimorio(ui, vm)
+            Vista.CATALOGO -> listaCatalogo(ui, vm, catalogo, buscador)
         }
+        item(key = "fin") { Spacer(Modifier.navigationBarsPadding()) }
     }
 
     if (descanso) {
@@ -105,6 +98,7 @@ fun MagiaTab(ui: HojaUi, vm: HojaViewModel) {
             "Descanso",
             "Tras descansar y estudiar o rezar, todos los conjuros preparados vuelven a estar disponibles.",
             confirmar = "Descansar",
+            destructivo = false,
             onDismiss = { descanso = false },
             onConfirm = vm::descansar
         )
@@ -125,68 +119,26 @@ fun MagiaTab(ui: HojaUi, vm: HojaViewModel) {
 private fun FilaEspacios(m: MagiaHoja, conjuros: List<ConjuroConDetalle>, onForzar: (Int) -> Unit) {
     val preparados = conjuros.groupBy { it.cp.nivel }.mapValues { (_, l) -> l.sumOf { it.cp.preparadoVeces } }
     val niveles = (0..9).filter { m.espacios[it] > 0 || (preparados[it] ?: 0) > 0 }
-    Text(
-        "${m.clase.nombre} · nivel de lanzador ${m.nivelLanzador}",
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.outline
+    EspaciosConjuro(
+        m.clase.nombre, m.nivelLanzador,
+        niveles.map { n -> EspacioNivel(n, preparados[n] ?: 0, m.espacios[n], n in m.forzados) },
+        onNivel = onForzar
     )
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        items(niveles) { n ->
-            val prep = preparados[n] ?: 0
-            val exceso = prep > m.espacios[n]
-            val color = if (exceso) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
-            Surface(
-                modifier = Modifier.clickable { onForzar(n) },
-                shape = RoundedCornerShape(10.dp),
-                color = color.copy(alpha = 0.1f),
-                border = BorderStroke(1.dp, color.copy(alpha = 0.35f))
-            ) {
-                Column(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (n == 0) "Trucos" else "Nv $n", fontSize = 10.sp, color = color, fontWeight = FontWeight.Bold)
-                    Text("$prep/${m.espacios[n]}" + if (n in m.forzados) "*" else "", fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-    }
 }
 
 @Composable
 fun DetallesConjuro(c: Conjuro) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    val p = Marca.colores
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val niveles = c.nivelesPorClase.entries.joinToString { "${NOMBRE_LISTA[it.key] ?: it.key} ${it.value}" }
-        if (niveles.isNotBlank()) Text(niveles, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+        if (niveles.isNotBlank()) Text(niveles.uppercase(), style = Tipos.etiquetaCaps, color = p.azulArcano)
         Text(
             listOf("TL" to c.tl, "Alcance" to c.alcance, "Comp." to c.componentes, "Duración" to c.duracion, "TS" to c.ts, "RC" to c.rc)
                 .filter { it.second.isNotBlank() }.joinToString(" · ") { "${it.first}: ${it.second}" },
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = Tipos.caption,
+            color = p.tintaSuave
         )
-        if (c.descripcion.isNotBlank()) Text(c.descripcion, style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable
-private fun TarjetaConjuro(nombre: String, sub: String? = null, acciones: @Composable () -> Unit, detalle: @Composable () -> Unit, extra: (@Composable () -> Unit)? = null) {
-    var abierto by remember { mutableStateOf(false) }
-    Card(
-        modifier = Modifier.fillMaxWidth().clickable { abierto = !abierto },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-    ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(nombre, style = MaterialTheme.typography.titleSmall)
-                    sub?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                }
-                acciones()
-            }
-            extra?.invoke()
-            if (abierto) {
-                Spacer(Modifier.height(6.dp))
-                detalle()
-            }
-        }
+        if (c.descripcion.isNotBlank()) Text(c.descripcion, style = Tipos.cuerpo, color = p.tinta)
     }
 }
 
@@ -194,90 +146,90 @@ private fun tituloNivel(n: Int) = if (n == 0) "Trucos (nivel 0)" else "Nivel $n"
 
 @Composable
 private fun Vacio(texto: String) {
-    Text(texto, Modifier.padding(24.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(texto, Modifier.fillMaxWidth().padding(24.dp), style = Tipos.lore, color = Marca.colores.tintaSuave, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
 }
 
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun ListaPreparados(ui: HojaUi, vm: HojaViewModel) {
+/** Conjuros preparados agrupados por nivel, una ventana por nivel con una casilla de llama por copia. */
+private fun androidx.compose.foundation.lazy.LazyListScope.listaPreparados(ui: HojaUi, vm: HojaViewModel) {
     val preparados = ui.conjuros.filter { it.cp.preparadoVeces > 0 }
     if (preparados.isEmpty()) {
-        Vacio("No hay conjuros preparados. Prepáralos desde «Conocidos».")
+        item(key = "vacio") { Vacio("No hay conjuros preparados. Prepáralos desde «Conocidos».") }
         return
     }
-    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        preparados.groupBy { it.cp.nivel }.toSortedMap().forEach { (nivel, lista) ->
-            item(key = "h$nivel") { Text(tituloNivel(nivel), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
-            items(lista, key = { "p${it.cp.conjuroId}" }) { d ->
-                val c = d.conjuro.toConjuro()
-                val restantes = d.cp.preparadoVeces - d.cp.usadoVeces
-                TarjetaConjuro(
-                    c.nombre,
-                    sub = if (restantes == 0) "Gastado" else "$restantes de ${d.cp.preparadoVeces} disponibles",
-                    acciones = {},
-                    detalle = { DetallesConjuro(c) },
-                    extra = {
-                        // Una casilla por cada vez que está preparado; marcarla = lanzado
-                        FlowRow {
-                            repeat(d.cp.preparadoVeces) { i ->
-                                Checkbox(
-                                    checked = i < d.cp.usadoVeces,
-                                    onCheckedChange = { marcar -> vm.setUsados(d.cp, if (marcar) i + 1 else i) }
-                                )
-                            }
-                        }
-                    }
-                )
+    preparados.groupBy { it.cp.nivel }.toSortedMap().forEach { (nivel, lista) ->
+        item(key = "p$nivel") {
+            Ventana(tituloNivel(nivel), Modifier.padding(top = 14.dp)) {
+                lista.forEach { d ->
+                    var abierto by remember(d.cp.conjuroId) { mutableStateOf(false) }
+                    val c = d.conjuro.toConjuro()
+                    EntradaConjuro(
+                        c.nombre, d.cp.preparadoVeces, d.cp.usadoVeces,
+                        onLanzadas = { vm.setUsados(d.cp, it) },
+                        onNombre = { abierto = !abierto }
+                    )
+                    if (abierto) Column(Modifier.padding(start = 8.dp, top = 8.dp, bottom = 12.dp)) { DetallesConjuro(c) }
+                }
             }
         }
     }
 }
 
+/** Fila de un conjuro con sus acciones a la derecha; tocar el nombre despliega los detalles. */
 @Composable
-private fun ListaGrimorio(ui: HojaUi, vm: HojaViewModel) {
-    var olvidar by remember { mutableStateOf<ConjuroConDetalle?>(null) }
+private fun FilaConjuro(nombre: String, sub: String?, acciones: @Composable () -> Unit, detalle: @Composable () -> Unit) {
+    var abierto by remember { mutableStateOf(false) }
+    val c = Marca.colores
+    Column(Modifier.fillMaxWidth()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).clickable(onClickLabel = if (abierto) "Plegar" else "Ver detalles") { abierto = !abierto }.padding(vertical = 6.dp)) {
+                Text(nombre, style = Tipos.ui, color = c.tinta)
+                sub?.let { Text(it, style = Tipos.caption, color = c.azulArcano) }
+            }
+            acciones()
+        }
+        if (abierto) Column(Modifier.padding(bottom = 12.dp)) { detalle() }
+        Filete()
+    }
+}
+
+private fun androidx.compose.foundation.lazy.LazyListScope.listaGrimorio(ui: HojaUi, vm: HojaViewModel) {
     if (ui.conjuros.isEmpty()) {
-        Vacio("Aún no conoces conjuros. Añádelos desde el «Catálogo».")
+        item(key = "vacio") { Vacio("Aún no conoces conjuros. Añádelos desde el «Catálogo».") }
         return
     }
-    LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        ui.conjuros.groupBy { it.cp.nivel }.toSortedMap().forEach { (nivel, lista) ->
-            item(key = "h$nivel") { Text(tituloNivel(nivel), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp)) }
-            items(lista, key = { "g${it.cp.conjuroId}" }) { d ->
-                val c = d.conjuro.toConjuro()
-                TarjetaConjuro(
-                    c.nombre,
-                    sub = if (d.cp.preparadoVeces > 0) "Preparado ×${d.cp.preparadoVeces}" else null,
-                    acciones = {
-                        IconButton(onClick = { vm.preparar(d.cp, -1) }, enabled = d.cp.preparadoVeces > 0) { Icon(Icons.Default.Remove, "Preparar uno menos") }
-                        Text("${d.cp.preparadoVeces}", fontWeight = FontWeight.Bold)
-                        IconButton(onClick = { vm.preparar(d.cp, 1) }) { Icon(Icons.Default.Add, "Preparar") }
-                        IconButton(onClick = { olvidar = d }) { Icon(Icons.Default.Close, "Quitar de conocidos", tint = MaterialTheme.colorScheme.outline) }
-                    },
-                    detalle = { DetallesConjuro(c) }
-                )
+    ui.conjuros.groupBy { it.cp.nivel }.toSortedMap().forEach { (nivel, lista) ->
+        item(key = "g$nivel") {
+            var olvidar by remember { mutableStateOf<ConjuroConDetalle?>(null) }
+            Ventana(tituloNivel(nivel), Modifier.padding(top = 14.dp)) {
+                lista.forEach { d ->
+                    val c = d.conjuro.toConjuro()
+                    FilaConjuro(
+                        c.nombre,
+                        sub = if (d.cp.preparadoVeces > 0) "Preparado ×${d.cp.preparadoVeces}" else null,
+                        acciones = {
+                            Contador(d.cp.preparadoVeces, { n -> vm.preparar(d.cp, n - d.cp.preparadoVeces) }, "Preparar ${c.nombre}", min = 0)
+                            BotonIcono({ olvidar = d }, "Quitar ${c.nombre} de conocidos") { IconoGlifo(Glifo.CERRAR, color = Marca.colores.tintaSuave) }
+                        },
+                        detalle = { DetallesConjuro(c) }
+                    )
+                }
             }
-        }
-    }
-    olvidar?.let { d ->
-        ConfirmarDialog("Quitar conjuro", "¿Quitar ${d.conjuro.nombre} de tus conjuros conocidos?", confirmar = "Quitar", onDismiss = { olvidar = null }) {
-            vm.olvidar(d.cp.conjuroId)
+            olvidar?.let { d ->
+                ConfirmarDialog("Quitar conjuro", "¿Quitar ${d.conjuro.nombre} de tus conjuros conocidos?", confirmar = "Quitar", onDismiss = { olvidar = null }) {
+                    vm.olvidar(d.cp.conjuroId)
+                }
+            }
         }
     }
 }
 
-@Composable
-private fun ListaCatalogo(ui: HojaUi, vm: HojaViewModel, catalogo: List<Conjuro>) {
-    val context = LocalContext.current
-    val listas = ui.hoja.magia.mapNotNull { it.clase.listaConjuros }
-    var busqueda by rememberSaveable { mutableStateOf("") }
-    var nivel by rememberSaveable { mutableStateOf<Int?>(null) }
-    var todas by rememberSaveable { mutableStateOf(listas.isEmpty()) }
-    var nuevo by remember { mutableStateOf(false) }
-    val conocidos = ui.conjuros.map { it.cp.conjuroId }.toSet()
-    val csv = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) vm.importarCsv(uri) { n -> Toast.makeText(context, "$n conjuros importados", Toast.LENGTH_SHORT).show() }
-    }
+/** Filtros del catálogo: viven fuera de la lista para que las filas sean perezosas. */
+private class Buscador(val listas: List<String>) {
+    var busqueda by mutableStateOf("")
+    var nivel by mutableStateOf<Int?>(null)
+    var todas by mutableStateOf(listas.isEmpty())
+    var nuevo by mutableStateOf(false)
+    lateinit var importarCsv: () -> Unit
 
     /** Nivel del conjuro para este personaje: el de su lista de clase, o el primero que tenga. */
     fun nivelPara(c: Conjuro): Int? {
@@ -285,46 +237,63 @@ private fun ListaCatalogo(ui: HojaUi, vm: HojaViewModel, catalogo: List<Conjuro>
         return listas.firstNotNullOfOrNull { m[it] } ?: if (todas || listas.isEmpty()) m.values.minOrNull() ?: 0 else null
     }
 
-    val filtrados = catalogo.filter { c ->
+    fun filtrar(catalogo: List<Conjuro>) = catalogo.filter { c ->
         val n = nivelPara(c) ?: return@filter false
         (nivel == null || n == nivel) && (busqueda.isBlank() || c.nombre.contains(busqueda.trim(), ignoreCase = true))
     }
+}
 
-    Column {
-        Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            OutlinedTextField(busqueda, { busqueda = it }, leadingIcon = { Icon(Icons.Default.Search, null) }, placeholder = { Text("Buscar conjuro") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                item { FilterChip(selected = nivel == null, onClick = { nivel = null }, label = { Text("Todos") }) }
-                items((0..9).toList()) { n -> FilterChip(selected = nivel == n, onClick = { nivel = if (nivel == n) null else n }, label = { Text("$n") }) }
-            }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (listas.isNotEmpty()) {
-                    Checkbox(todas, { todas = it })
-                    Text("Incluir otras clases", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
-                } else Spacer(Modifier.weight(1f))
-                TextButton(onClick = { nuevo = true }) { Text("Nuevo") }
-                TextButton(onClick = { csv.launch(arrayOf("text/*", "*/*")) }) { Text("CSV") }
-            }
-        }
-        LazyColumn(contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(filtrados, key = { it.id }) { c ->
-                val n = nivelPara(c) ?: 0
-                val sabido = c.id in conocidos
-                TarjetaConjuro(
-                    c.nombre,
-                    sub = c.nivelesPorClase.entries.joinToString { "${NOMBRE_LISTA[it.key] ?: it.key} ${it.value}" }.ifBlank { "Nivel $n" } +
-                        if (c.esPropio) " · propio" else "",
-                    acciones = {
-                        if (sabido) Icon(Icons.Default.Check, "Conocido", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(12.dp))
-                        else IconButton(onClick = { vm.aprender(c, n) }) { Icon(Icons.Default.Add, "Añadir a conocidos") }
-                    },
-                    detalle = { DetallesConjuro(c) }
-                )
-            }
-        }
+@Composable
+private fun rememberBuscador(ui: HojaUi, vm: HojaViewModel): Buscador {
+    val context = LocalContext.current
+    val listas = ui.hoja.magia.mapNotNull { it.clase.listaConjuros }
+    val b = remember(listas) { Buscador(listas) }
+    val csv = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) vm.importarCsv(uri) { n -> Toast.makeText(context, "$n conjuros importados", Toast.LENGTH_SHORT).show() }
     }
+    b.importarCsv = { csv.launch(arrayOf("text/*", "*/*")) }
+    return b
+}
 
-    if (nuevo) NuevoConjuroDialog(listas.firstOrNull(), onDismiss = { nuevo = false }) { c, n -> vm.crearConjuro(c, n); nuevo = false }
+private fun androidx.compose.foundation.lazy.LazyListScope.listaCatalogo(ui: HojaUi, vm: HojaViewModel, catalogo: List<Conjuro>, b: Buscador) {
+    val conocidos = ui.conjuros.map { it.cp.conjuroId }.toSet()
+    val filtrados = b.filtrar(catalogo)
+    item(key = "buscador") {
+        Ventana("Catálogo", Modifier.padding(top = 14.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Campo(b.busqueda, { b.busqueda = it }, null, marcador = "Buscar conjuro")
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    item { Etiqueta("Todos", tono = if (b.nivel == null) Tono.ORO else Tono.LISO, onClick = { b.nivel = null }) }
+                    items((0..9).toList()) { n -> Etiqueta("$n", tono = if (b.nivel == n) Tono.ORO else Tono.LISO, onClick = { b.nivel = if (b.nivel == n) null else n }) }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (b.listas.isNotEmpty()) {
+                        Casilla(b.todas, { b.todas = it }, Modifier.weight(1f), etiqueta = "Incluir otras clases")
+                    } else Spacer(Modifier.weight(1f))
+                    Boton("Nuevo", { b.nuevo = true }, variante = Variante.DISCRETO)
+                    Boton("CSV", { b.importarCsv() }, variante = Variante.DISCRETO, descripcion = "Importar conjuros de un CSV")
+                }
+            }
+        }
+        if (b.nuevo) NuevoConjuroDialog(b.listas.firstOrNull(), onDismiss = { b.nuevo = false }) { c, n -> vm.crearConjuro(c, n); b.nuevo = false }
+    }
+    if (filtrados.isEmpty()) item(key = "ninguno") { Vacio("Ningún conjuro coincide.") }
+    items(filtrados, key = { "c${it.id}" }) { c ->
+        val n = b.nivelPara(c) ?: 0
+        FilaConjuro(
+            c.nombre,
+            sub = c.nivelesPorClase.entries.joinToString { "${NOMBRE_LISTA[it.key] ?: it.key} ${it.value}" }.ifBlank { "Nivel $n" } +
+                if (c.esPropio) " · propio" else "",
+            acciones = {
+                if (c.id in conocidos) {
+                    IconoGlifo(Glifo.VISTO, Modifier.padding(14.dp), color = Marca.colores.oro, descripcion = "Conocido")
+                } else {
+                    BotonIcono({ vm.aprender(c, n) }, "Añadir ${c.nombre} a conocidos") { IconoGlifo(Glifo.MAS) }
+                }
+            },
+            detalle = { DetallesConjuro(c) }
+        )
+    }
 }
 
 @Composable
@@ -335,18 +304,18 @@ fun NuevoConjuroDialog(lista: String?, onDismiss: () -> Unit, nombre: String = "
         val n = (nivel.toIntOrNull() ?: 0).coerceIn(0, 9)
         onGuardar(c.copy(nombre = c.nombre.trim(), niveles = Conjuro.formatNiveles(mapOf((lista ?: LISTA_PROPIA) to n))), n)
     }) {
-        OutlinedTextField(c.nombre, { c = c.copy(nombre = it) }, label = { Text("Nombre") }, singleLine = true)
+        Campo(c.nombre, { c = c.copy(nombre = it) }, "Nombre")
         CampoNumero(nivel, { nivel = it }, "Nivel (0-9)")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(c.tl, { c = c.copy(tl = it) }, label = { Text("TL") }, singleLine = true, modifier = Modifier.weight(1f))
-            OutlinedTextField(c.componentes, { c = c.copy(componentes = it) }, label = { Text("Comp.") }, singleLine = true, modifier = Modifier.weight(1f))
+            Campo(c.tl, { c = c.copy(tl = it) }, "TL", Modifier.weight(1f))
+            Campo(c.componentes, { c = c.copy(componentes = it) }, "Comp.", Modifier.weight(1f))
         }
-        OutlinedTextField(c.alcance, { c = c.copy(alcance = it) }, label = { Text("Alcance") }, singleLine = true)
-        OutlinedTextField(c.duracion, { c = c.copy(duracion = it) }, label = { Text("Duración") }, singleLine = true)
+        Campo(c.alcance, { c = c.copy(alcance = it) }, "Alcance")
+        Campo(c.duracion, { c = c.copy(duracion = it) }, "Duración")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(c.ts, { c = c.copy(ts = it) }, label = { Text("TS") }, singleLine = true, modifier = Modifier.weight(1f))
-            OutlinedTextField(c.rc, { c = c.copy(rc = it) }, label = { Text("RC") }, singleLine = true, modifier = Modifier.weight(1f))
+            Campo(c.ts, { c = c.copy(ts = it) }, "TS", Modifier.weight(1f))
+            Campo(c.rc, { c = c.copy(rc = it) }, "RC", Modifier.weight(1f))
         }
-        OutlinedTextField(c.descripcion, { c = c.copy(descripcion = it) }, label = { Text("Descripción") }, minLines = 3)
+        Campo(c.descripcion, { c = c.copy(descripcion = it) }, "Descripción", unaLinea = false, minLineas = 3)
     }
 }

@@ -130,9 +130,26 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
         repo.upsertEstado(f(actual))
     }
 
-    fun cambiarPg(delta: Int) = actualizarEstado { it.copy(pgActuales = (it.pgActuales + delta).coerceIn(0, it.pgMaximos)) }
+    /** Daño o curación normal. Al curar se recupera antes el daño normal y después el atenuado. */
+    fun cambiarPg(delta: Int) = actualizarEstado {
+        val pg = (it.pgActuales + delta).coerceIn(0, it.pgMaximos)
+        it.copy(pgActuales = pg, danoAtenuado = it.danoAtenuado.coerceAtMost(it.pgMaximos - pg))
+    }
 
-    fun setPgMax(max: Int) = actualizarEstado { it.copy(pgMaximos = max, pgActuales = it.pgActuales.coerceAtMost(max)) }
+    /** Un punto de daño atenuado: resta PG como el normal, pero se anota aparte. */
+    fun golpeAtenuado() = actualizarEstado {
+        if (it.pgActuales <= 0) it else it.copy(pgActuales = it.pgActuales - 1, danoAtenuado = it.danoAtenuado + 1)
+    }
+
+    /** Pasa un minuto: el daño atenuado devuelve 1 PG. */
+    fun recuperarAtenuado() = actualizarEstado {
+        if (it.danoAtenuado <= 0) it else it.copy(pgActuales = (it.pgActuales + 1).coerceAtMost(it.pgMaximos), danoAtenuado = it.danoAtenuado - 1)
+    }
+
+    fun setPgMax(max: Int) = actualizarEstado {
+        val pg = it.pgActuales.coerceAtMost(max)
+        it.copy(pgMaximos = max, pgActuales = pg, danoAtenuado = it.danoAtenuado.coerceIn(0, (max - pg).coerceAtLeast(0)))
+    }
 
     // ── Objetos ──
     fun guardarObjeto(o: Objeto) = lanzar {

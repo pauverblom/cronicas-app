@@ -5,42 +5,25 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FileOpen
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.sharp.FileOpen
+import androidx.compose.material.icons.sharp.Settings
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -49,11 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -65,16 +44,26 @@ import io.github.pauverblom.cronicas.data.ResumenPersonaje
 import io.github.pauverblom.cronicas.rules.data.Clases
 import io.github.pauverblom.cronicas.rules.data.Especies
 import io.github.pauverblom.cronicas.ui.common.ConfirmarDialog
-import io.github.pauverblom.cronicas.ui.foto.RetratoAvatar
-import io.github.pauverblom.cronicas.ui.foto.RetratoTarjeta
+import io.github.pauverblom.cronicas.ui.common.llamaDe
 import io.github.pauverblom.cronicas.ui.foto.Retratos
-import io.github.pauverblom.cronicas.ui.hoja.colorPg
+import io.github.pauverblom.cronicas.ui.hud.Boton
+import io.github.pauverblom.cronicas.ui.hud.BotonIcono
+import io.github.pauverblom.cronicas.ui.hud.Cabecera
+import io.github.pauverblom.cronicas.ui.hud.Cargando
+import io.github.pauverblom.cronicas.ui.hud.EntradaLista
+import io.github.pauverblom.cronicas.ui.hud.EstadoVacio
+import io.github.pauverblom.cronicas.ui.hud.Glifo
+import io.github.pauverblom.cronicas.ui.hud.TituloPantalla
+import io.github.pauverblom.cronicas.ui.hud.Variante
+import io.github.pauverblom.cronicas.ui.theme.Marca
+import io.github.pauverblom.cronicas.ui.theme.Tipos
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as CronicasApp).repository
@@ -106,7 +95,6 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onAbrir: (Long) -> Unit,
@@ -131,50 +119,44 @@ fun HomeScreen(
             if (id != null) onAbrir(id) else Toast.makeText(context, "El archivo no es un personaje válido", Toast.LENGTH_LONG).show()
         }
     }
+    val importar = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Crónicas de la Marca", fontWeight = FontWeight.Bold) },
-                actions = {
-                    IconButton(onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }) {
-                        Icon(Icons.Default.FileOpen, contentDescription = "Importar personaje")
-                    }
-                    IconButton(onClick = onAjustes) { Icon(Icons.Default.Settings, contentDescription = "Ajustes") }
-                }
-            )
-        },
-        floatingActionButton = {
-            if (!personajes.isNullOrEmpty()) {
-                ExtendedFloatingActionButton(
-                    onClick = onNuevo,
-                    icon = { Icon(Icons.Default.PersonAdd, null) },
-                    text = { Text("Nuevo personaje") }
-                )
+    Column(Modifier.fillMaxSize()) {
+        Cabecera(
+            acciones = {
+                BotonIcono(importar, "Importar personaje") { Icon(Icons.Sharp.FileOpen, null, Modifier.size(24.dp)) }
+                BotonIcono(onAjustes, "Ajustes") { Icon(Icons.Sharp.Settings, null, Modifier.size(24.dp)) }
             }
-        }
-    ) { padding ->
+        ) { TituloPantalla("Crónicas de la Marca") }
         val lista = personajes
         when {
-            lista == null -> Box(Modifier.fillMaxSize().padding(padding))
-            lista.isEmpty() -> SinPersonajes(Modifier.padding(padding), onNuevo)
-            else -> LazyVerticalGrid(
-                columns = GridCells.Adaptive(160.dp),
-                modifier = Modifier.fillMaxSize().padding(padding),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(lista, key = { it.personaje.id }) { r ->
-                    TarjetaPersonaje(
-                        r,
-                        onClick = { onAbrir(r.personaje.id) },
-                        onExportar = {
-                            exportando = r.personaje
-                            exportLauncher.launch("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
-                        },
-                        onEliminar = { borrando = r.personaje }
-                    )
+            lista == null -> Cargando()
+            lista.isEmpty() -> SinPersonajes(onNuevo, importar)
+            else -> {
+                Boton(
+                    "Nuevo personaje", onNuevo,
+                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp).widthIn(max = 420.dp).align(Alignment.CenterHorizontally),
+                    variante = Variante.DORADO, icono = Glifo.MAS, bloque = true
+                )
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(340.dp),
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 32.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(lista, key = { it.personaje.id }) { r ->
+                        FilaPersonaje(
+                            r,
+                            onClick = { onAbrir(r.personaje.id) },
+                            onExportar = {
+                                exportando = r.personaje
+                                exportLauncher.launch("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
+                            },
+                            onEliminar = { borrando = r.personaje }
+                        )
+                    }
+                    item { Box(Modifier.navigationBarsPadding()) }
                 }
             }
         }
@@ -191,87 +173,42 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SinPersonajes(modifier: Modifier, onNuevo: () -> Unit) {
-    Box(modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Bienvenido a la Marca del Este", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Crea tu primer aventurero para empezar su ficha.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(24.dp))
-            Button(onClick = onNuevo) {
-                Icon(Icons.Default.PersonAdd, null)
-                Text("Crear personaje", modifier = Modifier.padding(start = 8.dp))
+private fun SinPersonajes(onNuevo: () -> Unit, onImportar: () -> Unit) {
+    Box(Modifier.fillMaxSize().navigationBarsPadding(), contentAlignment = Alignment.Center) {
+        EstadoVacio(
+            "Bienvenido a la Marca del Este",
+            "Crea tu primer aventurero para empezar su ficha."
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Boton("Crear personaje", onNuevo, variante = Variante.DORADO)
+                Boton("Importar personaje", onImportar)
             }
         }
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun TarjetaPersonaje(r: ResumenPersonaje, onClick: () -> Unit, onExportar: () -> Unit, onEliminar: () -> Unit) {
+private fun FilaPersonaje(r: ResumenPersonaje, onClick: () -> Unit, onExportar: () -> Unit, onEliminar: () -> Unit) {
     val p = r.personaje
     var menu by remember { mutableStateOf(false) }
-    val clase = Clases.porId(p.claseId)?.nombre ?: p.claseNombre.ifBlank { "Sin clase" }
+    val c = Marca.colores
+    val clase = Clases.porId(p.claseId)?.nombre ?: p.claseNombre.ifBlank { null }
     val especie = Especies.porId(p.especieId)?.nombre ?: p.especieNombre
+    val linea = if (clase == null) "Sin clase" else "$clase ${p.nivel}" + if (especie.isNotBlank()) " · $especie" else ""
     Box {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .combinedClickable(onClick = onClick, onLongClick = { menu = true }),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-        ) {
-            Column(Modifier.padding(10.dp)) {
-                RetratoAvatar(
-                    p.fotoPath, p.nombre, 160.dp,
-                    modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                    shape = RetratoTarjeta
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(p.nombre, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(
-                    "$clase ${p.nivel}" + if (especie.isNotBlank()) " · $especie" else "",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                r.estado?.let { e ->
-                    Spacer(Modifier.height(6.dp))
-                    val ratio = if (e.pgMaximos > 0) e.pgActuales.toFloat() / e.pgMaximos else 0f
-                    val color = colorPg(e.pgActuales, e.pgMaximos)
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Box(
-                            Modifier
-                                .fillMaxHeight()
-                                .fillMaxWidth(ratio.coerceIn(0f, 1f))
-                                .background(color)
-                        )
-                    }
-                    Text(
-                        "PG ${e.pgActuales}/${e.pgMaximos}",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = color,
-                        modifier = Modifier.padding(top = 2.dp)
-                    )
-                }
-            }
-        }
+        EntradaLista(
+            nombre = p.nombre,
+            retrato = remember(p.fotoPath) { p.fotoPath?.let(::File)?.takeIf { it.exists() } },
+            linea = linea,
+            pg = r.estado?.pgActuales,
+            pgMax = r.estado?.pgMaximos,
+            llama = llamaDe(p.claseId),
+            onClick = onClick,
+            onClickLargo = { menu = true }
+        )
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            DropdownMenuItem(text = { Text("Exportar") }, onClick = { menu = false; onExportar() })
-            DropdownMenuItem(text = { Text("Eliminar", color = MaterialTheme.colorScheme.error) }, onClick = { menu = false; onEliminar() })
+            DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onExportar() })
+            DropdownMenuItem(text = { Text("Eliminar", style = Tipos.ui, color = c.sangre) }, onClick = { menu = false; onEliminar() })
         }
     }
 }

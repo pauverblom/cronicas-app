@@ -5,29 +5,17 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.palette.graphics.Palette
-import coil3.compose.AsyncImage
 import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
+import io.github.pauverblom.cronicas.ui.common.llamaDe
+import io.github.pauverblom.cronicas.ui.hud.Retrato
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -66,41 +54,23 @@ object Retratos {
     }
 }
 
-/** Retrato del personaje, o su inicial sobre el color primario si no tiene. */
+/**
+ * Retrato del personaje en su anillo; sin foto, su inicial sobre el fuego de su clase ([claseId]).
+ * Con [anillo], el aro arde con ese fuego.
+ */
 @Composable
 fun RetratoAvatar(
     path: String?,
     nombre: String,
     size: Dp,
     modifier: Modifier = Modifier,
-    shape: Shape = CircleShape
+    claseId: String? = null,
+    anillo: Boolean = false
 ) {
-    if (path != null) {
-        AsyncImage(
-            model = File(path),
-            contentDescription = "Retrato de $nombre",
-            contentScale = ContentScale.Crop,
-            modifier = modifier.size(size).clip(shape)
-        )
-    } else {
-        Box(
-            modifier = modifier
-                .size(size)
-                .clip(shape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                nombre.trim().firstOrNull()?.uppercase() ?: "?",
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                fontWeight = FontWeight.Bold,
-                fontSize = (size.value * 0.42f).sp
-            )
-        }
-    }
+    // Un retrato cuyo archivo ya no existe muestra la inicial, no un hueco
+    val archivo = remember(path) { path?.let(::File)?.takeIf { it.exists() } }
+    Retrato(archivo, nombre, llamaDe(claseId), size, modifier, anillo)
 }
-
-val RetratoTarjeta = RoundedCornerShape(12.dp)
 
 /**
  * Lanzador del selector de retrato: galería o cámara, y luego recorte cuadrado.

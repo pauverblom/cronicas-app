@@ -1,103 +1,64 @@
 package io.github.pauverblom.cronicas.ui.common
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.PagerState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.HideImage
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import coil3.compose.AsyncImage
+import androidx.compose.ui.unit.max
+import io.github.pauverblom.cronicas.ui.hud.VentanaArte
+import io.github.pauverblom.cronicas.ui.hud.foco
+import io.github.pauverblom.cronicas.ui.hud.marcoEleccion
+import io.github.pauverblom.cronicas.ui.theme.Marca
+import io.github.pauverblom.cronicas.ui.theme.Tipos
 
-/** Fondo de papel para las ilustraciones (son tinta sobre blanco), igual en tema claro y oscuro. */
-private val Papel = Color(0xFFFBF6EA)
+/** Verdadero mientras el carrusel mide sus tarjetas fuera de pantalla: las ilustraciones no cargan la imagen. */
+private val LocalMidiendo = staticCompositionLocalOf { false }
+
+/** Ancho de las tarjetas del carrusel. */
+private val AnchoTarjeta = 280.dp
 
 /**
- * Ilustración del reglamento sobre fondo de papel. Si no hay imagen y se indica [archivoFaltante], muestra un
- * aviso «MISSING PICTURE» con el archivo que falta; si no, la inicial de [nombre] (opciones personalizadas).
+ * Ilustración del reglamento sobre papel. Si no hay imagen y se indica [archivoFaltante], muestra el aviso
+ * «MISSING PICTURE» con el archivo que falta; si no, una «?» (opciones personalizadas).
  */
 @Composable
 fun Ilustracion(uri: String?, nombre: String, alto: Dp, modifier: Modifier = Modifier, archivoFaltante: String? = null) {
-    val faltante = uri == null && archivoFaltante != null
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(alto)
-            .clip(RoundedCornerShape(12.dp))
-            .background(
-                when {
-                    uri != null -> Papel
-                    faltante -> MaterialTheme.colorScheme.errorContainer
-                    else -> MaterialTheme.colorScheme.primaryContainer
-                }
-            )
-            .then(
-                if (faltante) Modifier.border(2.dp, MaterialTheme.colorScheme.error, RoundedCornerShape(12.dp)) else Modifier
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            uri != null -> AsyncImage(
-                model = uri,
-                contentDescription = nombre,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier.fillMaxWidth().height(alto).padding(8.dp)
-            )
-            faltante -> Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(16.dp)) {
-                Icon(Icons.Default.HideImage, null, tint = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.size(40.dp))
-                Text(
-                    "MISSING PICTURE",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onErrorContainer
-                )
-                Text(
-                    "assets/ilustraciones/$archivoFaltante",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                    textAlign = TextAlign.Center
-                )
-            }
-            else -> Text(
-                nombre.firstOrNull()?.uppercase() ?: "?",
-                style = MaterialTheme.typography.displayLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
-        }
-    }
+    VentanaArte(uri, nombre, alto, modifier, archivoFaltante, medir = LocalMidiendo.current)
 }
 
 /**
- * Carrusel de tarjetas de una en una; las vecinas asoman por los lados.
+ * Carrusel de tarjetas de elección de una en una; las vecinas asoman por los lados.
  * [seleccionada] marca la tarjeta elegida; tocar una tarjeta la elige.
+ * Con [llama], la tarjeta elegida arde: el fuego recorre su marco, respira, se eleva, suelta chispas y vibra.
+ * Todas las tarjetas miden lo que la más alta, así el carrusel no cambia de alto al deslizar.
  */
 @Composable
 fun <T> Carrusel(
@@ -107,67 +68,80 @@ fun <T> Carrusel(
     onElegir: (T) -> Unit,
     modifier: Modifier = Modifier,
     clave: ((T) -> Any)? = null,
+    llama: ((T) -> Llama)? = null,
     contenido: @Composable ColumnScope.(T) -> Unit
 ) {
+    val c = Marca.colores
     Column(modifier) {
-        HorizontalPager(
-            state = estado,
-            contentPadding = PaddingValues(horizontal = 32.dp),
-            pageSpacing = 12.dp,
-            key = clave?.let { k -> { i: Int -> k(elementos[i]) } }
-        ) { i ->
-            val e = elementos[i]
-            val elegida = seleccionada(e)
-            Card(
-                modifier = Modifier.fillMaxWidth().clickable { onElegir(e) },
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (elegida) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer
-                ),
-                border = BorderStroke(if (elegida) 2.dp else 1.dp, if (elegida) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
-            ) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) { contenido(e) }
+        // El pager solo compone las páginas visibles y toma el alto de la mayor de ellas; medimos antes todas
+        // las tarjetas al ancho de página para fijar un alto común.
+        val medicion = @Composable {
+            CompositionLocalProvider(LocalMidiendo provides true) {
+                elementos.forEach { Tarjeta(it, elegida = false, onElegir = {}, Modifier, contenido) }
             }
         }
-        // Posición: puntos si son pocas tarjetas, contador si son muchas
-        Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            if (elementos.size > 15) {
-                Text(
-                    "${estado.currentPage + 1} / ${elementos.size}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                return@Row
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val margen = max((maxWidth - AnchoTarjeta) / 2, 24.dp)
+            val ancho = maxWidth - margen * 2
+            val pager = @Composable { alto: Dp ->
+                HorizontalPager(
+                    state = estado,
+                    modifier = Modifier.height(alto),
+                    pageSize = PageSize.Fixed(ancho),
+                    contentPadding = PaddingValues(horizontal = margen),
+                    pageSpacing = 12.dp,
+                    key = clave?.let { k -> { i: Int -> k(elementos[i]) } }
+                ) { i ->
+                    val e = elementos[i]
+                    Tarjeta(e, seleccionada(e), onElegir, Modifier.fillMaxHeight(), contenido, llama?.invoke(e))
+                }
             }
-            elementos.forEachIndexed { i, e ->
-                val actual = i == estado.currentPage
-                Box(
-                    Modifier
-                        .padding(horizontal = 3.dp)
-                        .size(if (actual) 9.dp else 6.dp)
-                        .clip(CircleShape)
-                        .background(
-                            when {
-                                seleccionada(e) -> MaterialTheme.colorScheme.primary
-                                actual -> MaterialTheme.colorScheme.onSurface
-                                else -> MaterialTheme.colorScheme.outlineVariant
-                            }
-                        )
-                )
+            SubcomposeLayout(Modifier.fillMaxWidth()) { constraints ->
+                val px = ancho.roundToPx()
+                val alto = subcompose("medicion", medicion)
+                    .maxOfOrNull { it.measure(Constraints(minWidth = px, maxWidth = px)).height } ?: 0
+                val colocable = subcompose("pager") { pager(alto.toDp()) }.first().measure(constraints.copy(minHeight = 0))
+                layout(colocable.width, colocable.height) { colocable.place(0, 0) }
             }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center) {
+            Text("${estado.currentPage + 1} / ${elementos.size}", style = Tipos.etiquetaCaps, color = c.tintaSuave)
         }
     }
 }
 
-/** Pareja etiqueta/valor compacta para las tarjetas. */
 @Composable
-fun DatoTarjeta(etiqueta: String, valor: String) {
-    Row {
-        Text("$etiqueta ", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(valor, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+private fun <T> Tarjeta(
+    elemento: T,
+    elegida: Boolean,
+    onElegir: (T) -> Unit,
+    modifier: Modifier,
+    contenido: @Composable ColumnScope.(T) -> Unit,
+    llama: Llama? = null
+) {
+    if (llama != null) {
+        val haptica = LocalHapticFeedback.current
+        val previa = remember { booleanArrayOf(elegida) }
+        LaunchedEffect(elegida) {
+            val recienElegida = elegida && !previa[0]
+            previa[0] = elegida
+            if (recienElegida) haptica.performHapticFeedback(HapticFeedbackType.LongPress)
+        }
+    }
+    val interaccion = remember { MutableInteractionSource() }
+    // Margen arriba para la cresta y la elevación, abajo para la clave que cuelga
+    Box(modifier.fillMaxWidth().padding(top = 14.dp, bottom = 20.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .marcoEleccion(elegida, llama)
+                .foco(interaccion)
+                .clickable(interaccion, null, role = Role.Button) { onElegir(elemento) }
+                .semantics { selected = elegida }
+                .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 34.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) { contenido(elemento) }
+        if (llama != null) Estallido(elegida, llama, Modifier.matchParentSize())
     }
 }

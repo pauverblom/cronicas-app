@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -144,7 +145,11 @@ data class Estado(
     /** Otros bonificadores a la CA que no salen del equipo. */
     val caOtros: Int = 0,
     val caOverride: Int? = null,
-    val movOverride: Int? = null
+    val movOverride: Int? = null,
+    /** Parte de los PG perdidos que es daño atenuado: no mata y se recupera a 1 PG por minuto. */
+    @ColumnInfo(defaultValue = "0") val danoAtenuado: Int = 0,
+    /** Ataques que no salen de un arma (garras, aliento...), como en la ficha. */
+    @ColumnInfo(defaultValue = "") val otrosAtaques: String = ""
 )
 
 /**

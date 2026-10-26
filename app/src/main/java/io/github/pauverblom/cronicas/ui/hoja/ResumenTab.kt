@@ -1,47 +1,21 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,9 +23,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.pauverblom.cronicas.data.Condicion
@@ -62,34 +35,60 @@ import io.github.pauverblom.cronicas.rules.Salvaciones
 import io.github.pauverblom.cronicas.ui.common.CampoNumero
 import io.github.pauverblom.cronicas.ui.common.FormularioDialog
 import io.github.pauverblom.cronicas.ui.common.NumeroDialog
-import io.github.pauverblom.cronicas.ui.common.SeccionCard
-import io.github.pauverblom.cronicas.ui.common.StatBox
 import io.github.pauverblom.cronicas.ui.common.signo
-import io.github.pauverblom.cronicas.ui.theme.LocalColoresHoja
+import io.github.pauverblom.cronicas.ui.hud.Aviso
+import io.github.pauverblom.cronicas.ui.hud.Boton
+import io.github.pauverblom.cronicas.ui.hud.BotonIcono
+import io.github.pauverblom.cronicas.ui.hud.Campo
+import io.github.pauverblom.cronicas.ui.hud.Dialogo
+import io.github.pauverblom.cronicas.ui.hud.Etiqueta
+import io.github.pauverblom.cronicas.ui.hud.FilaSalvacion
+import io.github.pauverblom.cronicas.ui.hud.Filete
+import io.github.pauverblom.cronicas.ui.hud.Glifo
+import io.github.pauverblom.cronicas.ui.hud.IconoGlifo
+import io.github.pauverblom.cronicas.ui.hud.Insignia
+import io.github.pauverblom.cronicas.ui.hud.ModoAtaque
+import io.github.pauverblom.cronicas.ui.hud.OrbePg
+import io.github.pauverblom.cronicas.ui.hud.PlacaAtaque
+import io.github.pauverblom.cronicas.ui.hud.Separador
+import io.github.pauverblom.cronicas.ui.hud.Subtitulo
+import io.github.pauverblom.cronicas.ui.hud.Variante
+import io.github.pauverblom.cronicas.ui.hud.Ventana
+import io.github.pauverblom.cronicas.ui.theme.Marca
+import io.github.pauverblom.cronicas.ui.theme.Tipos
 
-/** Columna desplazable en móvil; dos columnas en pantallas anchas. */
+/** Separación entre ventanas: deja sitio a la clave que cuelga de una y a la placa del título de la siguiente. */
+private val EntreVentanas = 30.dp
+
+/** Columna desplazable en móvil; dos columnas a partir de 700 dp. */
 @Composable
 fun ColumnasHoja(izquierda: @Composable ColumnScope.() -> Unit, derecha: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        if (maxWidth > 700.dp) {
-            Row(Modifier.fillMaxSize().padding(16.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    izquierda(); Spacer(Modifier.height(80.dp))
-                }
-                Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    derecha(); Spacer(Modifier.height(80.dp))
-                }
+        if (maxWidth >= 700.dp) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 22.dp, bottom = 48.dp).navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(EntreVentanas)
+                ) { izquierda() }
+                Column(
+                    Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 22.dp, bottom = 48.dp).navigationBarsPadding(),
+                    verticalArrangement = Arrangement.spacedBy(EntreVentanas)
+                ) { derecha() }
             }
         } else {
             Column(
-                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 48.dp).navigationBarsPadding(),
+                verticalArrangement = Arrangement.spacedBy(EntreVentanas)
             ) {
-                izquierda(); derecha(); Spacer(Modifier.height(80.dp))
+                izquierda(); derecha()
             }
         }
     }
 }
+
+/** Ancho a partir del cual la ficha va a dos columnas. */
+@Composable
+private fun esAncha(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 700
 
 private enum class Fijar { BA, MOV, PG_MAX }
 
@@ -99,31 +98,40 @@ fun ResumenTab(ui: HojaUi, vm: HojaViewModel) {
     var verCa by remember { mutableStateOf(false) }
     var editarDg by remember { mutableStateOf(false) }
     val h = ui.hoja
+    val ancha = esAncha()
 
+    // Móvil: Avisos → PG → CA/BA/DG/MOV → Ataques → Salvaciones → Condiciones.
+    // Tablet: PG, cifras y ataques a la izquierda; salvaciones, condiciones y avisos a la derecha.
     ColumnasHoja(
         izquierda = {
-            BloquePg(ui, onMenos = { vm.cambiarPg(-1) }, onMas = { vm.cambiarPg(1) }, onEditarMax = { fijar = Fijar.PG_MAX })
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                StatBox("CA", "${h.ca.total}", Modifier.weight(1f), MaterialTheme.colorScheme.secondary, forzado = h.ca.forzada, onClick = { verCa = true })
-                StatBox("BA", signo(h.ba), Modifier.weight(1f), MaterialTheme.colorScheme.tertiary, forzado = h.baForzado, onClick = { fijar = Fijar.BA })
-                StatBox("DG", h.dado.substringBefore(' '), Modifier.weight(1f), MaterialTheme.colorScheme.primary, forzado = h.dadoForzado, onClick = { editarDg = true })
-            }
-            StatBox(
-                "MOVIMIENTO",
-                "${h.movimiento} m",
-                Modifier.fillMaxWidth(),
-                LocalColoresHoja.current.pgBien,
-                detalle = "Marchar ${h.movimiento * 2} m · Correr ${h.movimiento * 4} m" +
-                    if (h.movimiento != h.movimientoBase) " · Base ${h.movimientoBase} m" else "",
-                forzado = h.movimientoForzado,
-                onClick = { fijar = Fijar.MOV }
+            if (!ancha) BloqueAvisos(h.avisos)
+            BloquePg(
+                ui, onMenos = { vm.cambiarPg(-1) }, onMas = { vm.cambiarPg(1) }, onEditarMax = { fijar = Fijar.PG_MAX },
+                onAtenuado = vm::golpeAtenuado, onRecuperar = vm::recuperarAtenuado
             )
-            if (h.avisos.isNotEmpty()) BloqueAvisos(h.avisos)
-            BloqueCondiciones(ui.condiciones, onGuardar = vm::guardarCondicion, onEliminar = vm::eliminarCondicion)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Insignia("CA", "${h.ca.total}", Modifier.weight(1f), fijado = h.ca.forzada, onClick = { verCa = true })
+                Insignia("BA", signo(h.ba), Modifier.weight(1f), fijado = h.baForzado, onClick = { fijar = Fijar.BA })
+                Insignia("DG", h.dado.substringBefore(' '), Modifier.weight(1f), fijado = h.dadoForzado, onClick = { editarDg = true })
+                Insignia(
+                    "MOV", "${h.movimiento} m", Modifier.weight(1f),
+                    sub = if (h.movimiento != h.movimientoBase) "Base ${h.movimientoBase} m" else "Correr ${h.movimiento * 4} m",
+                    fijado = h.movimientoForzado,
+                    onClick = { fijar = Fijar.MOV }
+                )
+            }
+            BloqueAtaques(h.ataques, ui.estado.otrosAtaques) { texto -> vm.actualizarEstado { it.copy(otrosAtaques = texto) } }
+            if (!ancha) {
+                BloqueSalvaciones(h.caracteristicas)
+                BloqueCondiciones(ui.condiciones, onGuardar = vm::guardarCondicion, onEliminar = vm::eliminarCondicion)
+            }
         },
         derecha = {
-            BloqueAtaques(h.ataques)
-            BloqueSalvaciones(h.caracteristicas)
+            if (ancha) {
+                BloqueSalvaciones(h.caracteristicas)
+                BloqueCondiciones(ui.condiciones, onGuardar = vm::guardarCondicion, onEliminar = vm::eliminarCondicion)
+                BloqueAvisos(h.avisos)
+            }
         }
     )
 
@@ -138,7 +146,7 @@ fun ResumenTab(ui: HojaUi, vm: HojaViewModel) {
             "Movimiento base (m)", ui.estado.movOverride,
             h.especie?.movimiento ?: 10,
             negativos = false,
-            explicacion = "La carga media resta 3 m; sobrecargado deja el movimiento en 3 m.",
+            explicacion = "Marchar ${h.movimiento * 2} m · Correr ${h.movimiento * 4} m. La carga media resta 3 m; sobrecargado deja el movimiento en 3 m.",
             onDismiss = { fijar = null }
         ) { v -> vm.actualizarEstado { it.copy(movOverride = v) }; fijar = null }
         Fijar.PG_MAX -> NumeroDialog(
@@ -157,115 +165,83 @@ fun ResumenTab(ui: HojaUi, vm: HojaViewModel) {
             "Dado de golpe", onDismiss = { editarDg = false },
             onGuardar = { vm.actualizarEstado { it.copy(dgOverride = texto.trim().ifBlank { null }) }; editarDg = false },
             extraBoton = if (ui.estado.dgOverride != null) {
-                { TextButton(onClick = { vm.actualizarEstado { it.copy(dgOverride = null) }; editarDg = false }) { Text("Automático") } }
+                { Boton("Automático", { vm.actualizarEstado { it.copy(dgOverride = null) }; editarDg = false }, variante = Variante.DISCRETO) }
             } else null
         ) {
-            Text(h.dado, style = MaterialTheme.typography.bodySmall)
-            OutlinedTextField(texto, { texto = it }, label = { Text("Dado") }, singleLine = true)
+            Text(h.dado, style = Tipos.cuerpoSm, color = Marca.colores.tintaSuave)
+            Campo(texto, { texto = it }, "Dado")
         }
     }
 }
 
 @Composable
-private fun BloquePg(ui: HojaUi, onMenos: () -> Unit, onMas: () -> Unit, onEditarMax: () -> Unit) {
+private fun BloquePg(
+    ui: HojaUi,
+    onMenos: () -> Unit,
+    onMas: () -> Unit,
+    onEditarMax: () -> Unit,
+    onAtenuado: () -> Unit,
+    onRecuperar: () -> Unit
+) {
     val e = ui.estado
-    val objetivo = colorPg(e.pgActuales, e.pgMaximos)
-    val color by animateColorAsState(objetivo, animationSpec = tween(400), label = "pg")
-    val ratio = if (e.pgMaximos > 0) e.pgActuales.toFloat() / e.pgMaximos else 0f
-    SeccionCard("Puntos de golpe", accion = {
-        IconButton(onClick = onEditarMax, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Edit, "Editar PG máximos", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
+    Ventana("Puntos de golpe") {
+        // Los PG máximos siempre se anotan a mano: no hay valor calculado que marcar como fijado
+        OrbePg(e.pgActuales, e.pgMaximos, e.danoAtenuado, maxFijado = false, onMenos, onMas)
+        Column(Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Boton("−1 atenuado", onAtenuado, activo = e.pgActuales > 0, bloque = true)
+            Boton("1 minuto", onRecuperar, activo = e.danoAtenuado > 0, bloque = true)
+            Boton("PG máximos", onEditarMax, Modifier.align(Alignment.CenterHorizontally), variante = Variante.DISCRETO, icono = Glifo.LAPIZ)
         }
-    }) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RoundButton("-1", LocalColoresHoja.current.pgMal, e.pgActuales > 0, onMenos)
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
-                Text("${e.pgActuales}", fontSize = 64.sp, fontWeight = FontWeight.Bold, color = color, lineHeight = 64.sp)
-                Text(" / ${e.pgMaximos}", fontSize = 26.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(bottom = 8.dp))
-            }
-            RoundButton("+1", LocalColoresHoja.current.pgBien, e.pgActuales < e.pgMaximos, onMas)
-        }
-        Spacer(Modifier.height(8.dp))
-        Box(
-            Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(MaterialTheme.colorScheme.surfaceVariant)
-        ) {
-            Box(
-                Modifier.fillMaxHeight().fillMaxWidth(ratio.coerceIn(0f, 1f)).clip(RoundedCornerShape(4.dp))
-                    .background(Brush.horizontalGradient(listOf(color.copy(alpha = 0.7f), color)))
-            )
-        }
-        if (e.pgActuales == 0) {
-            Text(
-                "Inconsciente. De -1 a -9 pierde 1 PG por asalto; a -10 muere.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 6.dp)
-            )
-        }
-    }
-}
-
-@Composable
-private fun RoundButton(texto: String, color: androidx.compose.ui.graphics.Color, activo: Boolean, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        enabled = activo,
-        modifier = Modifier.size(52.dp),
-        shape = CircleShape,
-        border = BorderStroke(1.dp, color.copy(alpha = if (activo) 0.6f else 0.2f)),
-        contentPadding = PaddingValues(0.dp)
-    ) {
-        Text(texto, color = color.copy(alpha = if (activo) 1f else 0.35f), fontWeight = FontWeight.Bold, fontSize = 18.sp)
     }
 }
 
 @Composable
 private fun BloqueAvisos(avisos: List<String>) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            avisos.forEach { a ->
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.Warning, null, modifier = Modifier.size(16.dp).padding(top = 2.dp), tint = MaterialTheme.colorScheme.onErrorContainer)
-                    Spacer(Modifier.width(6.dp))
-                    Text(a, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onErrorContainer)
-                }
-            }
+    if (avisos.isEmpty()) return
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        avisos.forEach { a ->
+            // «Carga media: -2 a las tiradas de DES…» lleva su propio título; el resto, «Aviso»
+            val (titulo, texto) = if (a.startsWith("Carga ") && ": " in a) a.substringBefore(": ") to a.substringAfter(": ") else "Aviso" to a
+            Aviso(texto, titulo = titulo, peligro = a.startsWith("Carga sobrecargad"))
         }
     }
 }
 
 @Composable
-private fun BloqueAtaques(ataques: List<AtaqueHoja>) {
-    SeccionCard("Ataques") {
-        ataques.forEachIndexed { i, a ->
-            if (i > 0) HorizontalDivider(Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(a.nombre, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
-                if (a.equipado) Text("EN MANO", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontSize = 10.sp)
+private fun BloqueAtaques(ataques: List<AtaqueHoja>, otrosAtaques: String, onOtrosAtaques: (String) -> Unit) {
+    var editando by remember { mutableStateOf(false) }
+    val c = Marca.colores
+    Ventana("Ataques") {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            ataques.forEach { a ->
+                PlacaAtaque(
+                    a.nombre, a.equipado,
+                    a.lineas.map { ModoAtaque(it.modo, it.ba, it.dano) },
+                    a.notas.ifBlank { null }, a.aviso
+                )
             }
-            a.lineas.forEach { l ->
-                Row(Modifier.fillMaxWidth().padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(l.modo, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                    Text("BA ${signo(l.ba)}", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.tertiary)
-                    Spacer(Modifier.width(12.dp))
-                    Text(l.dano, fontWeight = FontWeight.Bold, modifier = Modifier.width(76.dp))
-                }
-            }
-            if (a.notas.isNotBlank()) {
-                Text(a.notas, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            a.aviso?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
         }
-        if (ataques.size == 1) Text(
-            "Añade armas desde la pestaña Equipo.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.outline,
-            modifier = Modifier.padding(top = 8.dp)
-        )
+        if (ataques.size == 1) {
+            Text("Añade armas desde la pestaña Equipo.", style = Tipos.caption, color = c.tintaSuave, modifier = Modifier.padding(top = 8.dp))
+        }
+        Separador()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Subtitulo("Otros ataques")
+                Text(
+                    otrosAtaques.ifBlank { "Garras, aliento, ataques especiales…" },
+                    style = if (otrosAtaques.isBlank()) Tipos.lore.copy(fontSize = 15.sp, lineHeight = 22.sp) else Tipos.cuerpo,
+                    color = if (otrosAtaques.isBlank()) c.tintaSuave else c.tinta
+                )
+            }
+            BotonIcono({ editando = true }, "Editar otros ataques") { IconoGlifo(Glifo.LAPIZ) }
+        }
+    }
+    if (editando) {
+        var texto by remember { mutableStateOf(otrosAtaques) }
+        FormularioDialog("Otros ataques", onDismiss = { editando = false }, onGuardar = { onOtrosAtaques(texto.trim()); editando = false }) {
+            Campo(texto, { texto = it }, "Ataque, BA, daño y notas", unaLinea = false, minLineas = 3)
+        }
     }
 }
 
@@ -273,62 +249,38 @@ private fun BloqueAtaques(ataques: List<AtaqueHoja>) {
 @Composable
 private fun BloqueSalvaciones(caracts: List<CaracteristicaHoja>) {
     var detalle by remember { mutableStateOf<CaracteristicaHoja?>(null) }
-    val colores = LocalColoresHoja.current
-    SeccionCard("Salvaciones y tiradas") {
+    val c = Marca.colores
+    Ventana("Salvaciones y tiradas") {
         Text(
             "1d20 + bonificador ≥ ND (+ dificultad del Narrador)",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = Tipos.uiSm,
+            color = c.tintaSuave,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         )
-        Spacer(Modifier.height(8.dp))
-        caracts.chunked(3).forEach { fila ->
-            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                fila.forEach { c ->
-                    val color = colores.atributos[c.atributo] ?: MaterialTheme.colorScheme.primary
-                    Surface(
-                        modifier = Modifier.weight(1f).clickable { detalle = c },
-                        shape = RoundedCornerShape(12.dp),
-                        color = color.copy(alpha = 0.1f),
-                        border = BorderStroke(1.dp, color.copy(alpha = 0.35f))
-                    ) {
-                        Column(Modifier.padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(c.atributo.abrev, color = color, fontWeight = FontWeight.Bold, fontSize = 12.sp, letterSpacing = 1.sp)
-                                if (c.primaria) Icon(Icons.Default.Star, "Primaria", Modifier.size(12.dp), tint = color)
-                            }
-                            Text(signo(c.bonusTirada), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                            Text("ND ${c.nd}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            caracts.forEach { car -> FilaSalvacion(car.atributo, car.bonusTirada, car.nd, car.primaria, onClick = { detalle = car }) }
         }
     }
-    detalle?.let { c ->
-        AlertDialog(
-            onDismissRequest = { detalle = null },
-            title = { Text("${c.atributo.nombre} (${c.atributo.abrev})") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("1d20 ${signo(c.mod)} (mod.) ${signo(c.bonusTirada - c.mod)} (nivel) contra ND ${c.nd}" + if (c.primaria) " (primaria)" else " (secundaria)")
-                    Text("Salvaciones contra:", style = MaterialTheme.typography.titleSmall)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Salvaciones.amenazas[c.atributo].orEmpty().forEach { t ->
-                            Surface(shape = RoundedCornerShape(8.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
-                                Text(t, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { detalle = null }) { Text("Cerrar") } }
-        )
+    detalle?.let { car ->
+        Dialogo(
+            "${car.atributo.nombre} (${car.atributo.abrev})",
+            onDismiss = { detalle = null },
+            acciones = { Boton("Cerrar", { detalle = null }, variante = Variante.DISCRETO) }
+        ) {
+            Text("1d20 ${signo(car.mod)} (mod.) ${signo(car.bonusTirada - car.mod)} (nivel) contra ND ${car.nd}" + if (car.primaria) " (primaria)" else " (secundaria)")
+            Subtitulo("Salvaciones contra:")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Salvaciones.amenazas[car.atributo].orEmpty().forEach { t -> Etiqueta(t) }
+            }
+        }
     }
 }
 
 @Composable
 private fun CaDialog(ui: HojaUi, vm: HojaViewModel, onDismiss: () -> Unit) {
     val ca = ui.hoja.ca
+    val c = Marca.colores
     var otros by remember { mutableStateOf(ui.estado.caOtros.toString()) }
     var forzada by remember { mutableStateOf(ui.estado.caOverride?.toString() ?: "") }
     FormularioDialog(
@@ -340,22 +292,27 @@ private fun CaDialog(ui: HojaUi, vm: HojaViewModel, onDismiss: () -> Unit) {
         }
     ) {
         @Composable
-        fun fila(etiqueta: String, valor: Int, signoMas: Boolean = true) = Row(Modifier.fillMaxWidth()) {
-            Text(etiqueta, Modifier.weight(1f))
-            Text(if (signoMas) signo(valor) else "$valor", fontWeight = FontWeight.Bold)
+        fun fila(etiqueta: String, valor: Int, signoMas: Boolean = true, total: Boolean = false) = Column {
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(etiqueta, style = if (total) Tipos.ui else Tipos.uiSm, color = if (total) c.tinta else c.tintaSuave, modifier = Modifier.weight(1f))
+                Text(if (signoMas) signo(valor) else "$valor", style = Tipos.cifraMd.copy(fontWeight = FontWeight.Bold), color = if (total) c.oro else c.tinta)
+            }
+            if (!total) Filete()
         }
-        fila(if (ui.hoja.clase?.id == "mistico") "Base (místico)" else "Base", ca.base, false)
-        fila("Armadura", ca.armadura)
-        fila("DES", ca.des)
-        fila("Escudo", ca.escudo)
-        if (ca.magia != 0) fila("Objetos mágicos (el mayor)", ca.magia)
-        fila("Otros", ca.otros)
-        HorizontalDivider()
-        fila("Total calculado", ca.base + ca.armadura + ca.des + ca.escudo + ca.magia + ca.otros, false)
+        Column {
+            fila(if (ui.hoja.clase?.id == "mistico") "Base (místico)" else "Base", ca.base, false)
+            fila(ca.nombreArmadura?.let { "Armadura ($it)" } ?: "Armadura (ninguna)", ca.armadura)
+            fila("DES", ca.des)
+            fila(ca.nombreEscudo?.let { "Escudo ($it)" } ?: "Escudo", ca.escudo)
+            if (ca.magia != 0) fila("Objetos mágicos (el mayor)", ca.magia)
+            fila("Otros", ca.otros)
+            Spacer(Modifier.height(4.dp))
+            fila("Total calculado", ca.base + ca.armadura + ca.des + ca.escudo + ca.magia + ca.otros, false, total = true)
+        }
         if (ca.casco > 0) {
-            Text("Casco: ${signo(ca.casco)} solo contra ataques a la cabeza", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("${ca.nombreCasco ?: "Casco"}: ${signo(ca.casco)} solo contra ataques a la cabeza", style = Tipos.cuerpoSm, color = c.tintaSuave)
         }
-        Text("Equipa armadura, escudo y casco desde la pestaña Equipo.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Equipa armadura, escudo y casco desde la pestaña Equipo.", style = Tipos.cuerpoSm, color = c.tintaSuave)
         CampoNumero(otros, { otros = it }, "Otros bonificadores", negativos = true)
         CampoNumero(forzada, { forzada = it }, "CA fijada a mano", soporte = "Déjalo vacío para calcularla")
     }
@@ -365,42 +322,42 @@ private fun CaDialog(ui: HojaUi, vm: HojaViewModel, onDismiss: () -> Unit) {
 @Composable
 private fun BloqueCondiciones(condiciones: List<Condicion>, onGuardar: (Condicion) -> Unit, onEliminar: (Condicion) -> Unit) {
     var editando by remember { mutableStateOf<Condicion?>(null) }
-    SeccionCard("Condiciones", accion = {
-        IconButton(onClick = { editando = Condicion(personajeId = 0, nombre = "") }, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Add, "Añadir condición", tint = MaterialTheme.colorScheme.primary)
-        }
-    }) {
-        if (condiciones.isEmpty()) {
-            Text("Sin condiciones activas", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            condiciones.forEach { c ->
-                InputChip(
-                    selected = false,
-                    onClick = { editando = c },
-                    label = { Text(if (c.nota.isBlank()) c.nombre else "${c.nombre}: ${c.nota}", maxLines = 1) }
-                )
+    val c = Marca.colores
+    Ventana("Condiciones") {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            if (condiciones.isEmpty()) {
+                Text("Sin condiciones activas", style = Tipos.lore.copy(fontSize = Tipos.cuerpo.fontSize), color = c.tintaSuave)
+            } else {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    condiciones.forEach { cond ->
+                        Etiqueta(cond.nombre, nota = cond.nota.ifBlank { null }, onClick = { editando = cond })
+                    }
+                }
             }
+            Boton(
+                "Nueva condición", { editando = Condicion(personajeId = 0, nombre = "") },
+                Modifier.align(Alignment.CenterHorizontally), icono = Glifo.MAS
+            )
         }
     }
-    editando?.let { c ->
-        var nombre by remember(c) { mutableStateOf(c.nombre) }
-        var nota by remember(c) { mutableStateOf(c.nota) }
+    editando?.let { cond ->
+        var nombre by remember(cond) { mutableStateOf(cond.nombre) }
+        var nota by remember(cond) { mutableStateOf(cond.nota) }
         FormularioDialog(
-            if (c.id == 0L) "Nueva condición" else "Condición",
+            if (cond.id == 0L) "Nueva condición" else "Condición",
             onDismiss = { editando = null },
-            onGuardar = { onGuardar(c.copy(nombre = nombre.trim(), nota = nota.trim())); editando = null },
+            onGuardar = { onGuardar(cond.copy(nombre = nombre.trim(), nota = nota.trim())); editando = null },
             guardarActivo = nombre.isNotBlank(),
-            extraBoton = if (c.id != 0L) {
-                { TextButton(onClick = { onEliminar(c); editando = null }) { Text("Quitar", color = MaterialTheme.colorScheme.error) } }
+            extraBoton = if (cond.id != 0L) {
+                { Boton("Quitar", { onEliminar(cond); editando = null }, variante = Variante.PELIGRO_DISCRETO) }
             } else null
         ) {
-            OutlinedTextField(nombre, { nombre = it }, label = { Text("Nombre (bendecido, envenenado...)") }, singleLine = true)
-            OutlinedTextField(nota, { nota = it }, label = { Text("Nota (opcional)") })
+            Campo(nombre, { nombre = it }, "Nombre", marcador = "bendecido, envenenado…")
+            Campo(nota, { nota = it }, "Nota (opcional)")
         }
     }
 }
 
 /** Para pestañas que muestran el color de cada característica. */
 @Composable
-fun colorAtributo(a: Atributo) = LocalColoresHoja.current.atributos[a] ?: MaterialTheme.colorScheme.primary
+fun colorAtributo(a: Atributo) = Marca.colores.atributo(a)

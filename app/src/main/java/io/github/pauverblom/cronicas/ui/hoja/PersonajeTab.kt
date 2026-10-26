@@ -3,33 +3,15 @@ package io.github.pauverblom.cronicas.ui.hoja
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.Button
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,9 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import io.github.pauverblom.cronicas.data.Habilidad
 import io.github.pauverblom.cronicas.data.PERSONALIZADA
 import io.github.pauverblom.cronicas.data.Personaje
@@ -54,11 +35,25 @@ import io.github.pauverblom.cronicas.ui.common.CampoNumero
 import io.github.pauverblom.cronicas.ui.common.Desplegable
 import io.github.pauverblom.cronicas.ui.common.DesplegableEditable
 import io.github.pauverblom.cronicas.ui.common.FormularioDialog
-import io.github.pauverblom.cronicas.ui.common.SeccionCard
 import io.github.pauverblom.cronicas.ui.common.signo
 import io.github.pauverblom.cronicas.ui.foto.RetratoAvatar
-import io.github.pauverblom.cronicas.ui.foto.RetratoTarjeta
 import io.github.pauverblom.cronicas.ui.foto.rememberSelectorRetrato
+import io.github.pauverblom.cronicas.ui.hud.BarraPx
+import io.github.pauverblom.cronicas.ui.hud.Boton
+import io.github.pauverblom.cronicas.ui.hud.BotonIcono
+import io.github.pauverblom.cronicas.ui.hud.Campo
+import io.github.pauverblom.cronicas.ui.hud.Casilla
+import io.github.pauverblom.cronicas.ui.hud.EscudoCaracteristica
+import io.github.pauverblom.cronicas.ui.hud.Filete
+import io.github.pauverblom.cronicas.ui.hud.Glifo
+import io.github.pauverblom.cronicas.ui.hud.IconoGlifo
+import io.github.pauverblom.cronicas.ui.hud.Separador
+import io.github.pauverblom.cronicas.ui.hud.Subtitulo
+import io.github.pauverblom.cronicas.ui.hud.Variante
+import io.github.pauverblom.cronicas.ui.hud.Ventana
+import io.github.pauverblom.cronicas.ui.hud.miles
+import io.github.pauverblom.cronicas.ui.theme.Marca
+import io.github.pauverblom.cronicas.ui.theme.Tipos
 
 @Composable
 fun PersonajeTab(ui: HojaUi, vm: HojaViewModel) {
@@ -92,7 +87,7 @@ fun PersonajeTab(ui: HojaUi, vm: HojaViewModel) {
             vm.actualizarPersonaje { it.copy(experiencia = (it.experiencia + n).coerceAtLeast(0)) }
             anadirXp = false
         }, guardar = "Añadir") {
-            Text("Total actual: ${ui.personaje.experiencia} PX")
+            Text("Total actual: ${miles(ui.personaje.experiencia)} PX")
             CampoNumero(texto, { texto = it }, "PX ganados", negativos = true, soporte = "Usa un número negativo para restar")
         }
     }
@@ -102,9 +97,10 @@ fun PersonajeTab(ui: HojaUi, vm: HojaViewModel) {
 @Composable
 private fun FilaDato(etiqueta: String, valor: String) {
     if (valor.isBlank()) return
-    Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
-        Text(etiqueta, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(110.dp))
-        Text(valor, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+    val c = Marca.colores
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Text(etiqueta, style = Tipos.uiSm, color = c.tintaSuave, modifier = Modifier.width(110.dp))
+        Text(valor, style = Tipos.ui, color = c.tinta, modifier = Modifier.weight(1f))
     }
 }
 
@@ -112,33 +108,31 @@ private fun FilaDato(etiqueta: String, valor: String) {
 private fun BloqueIdentidad(ui: HojaUi, vm: HojaViewModel, onEditar: () -> Unit) {
     val p = ui.personaje
     val h = ui.hoja
+    val c = Marca.colores
     var menuRetrato by remember { mutableStateOf(false) }
     val selector = rememberSelectorRetrato(vm::setRetrato)
-    SeccionCard("Personaje", accion = {
-        IconButton(onClick = onEditar, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Edit, "Editar", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
-        }
-    }) {
-        Row {
+    Ventana("Personaje", accion = { BotonIcono(onEditar, "Editar personaje") { IconoGlifo(Glifo.LAPIZ) } }) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             Box {
-                RetratoAvatar(p.fotoPath, p.nombre, 96.dp, Modifier.clickable { menuRetrato = true }, shape = RetratoTarjeta)
+                RetratoAvatar(
+                    p.fotoPath, p.nombre, 128.dp,
+                    Modifier.clickable(onClickLabel = "Cambiar retrato") { menuRetrato = true },
+                    claseId = p.claseId, anillo = true
+                )
                 DropdownMenu(expanded = menuRetrato, onDismissRequest = { menuRetrato = false }) {
-                    DropdownMenuItem(text = { Text("Elegir de la galería") }, onClick = { menuRetrato = false; selector(false) })
-                    DropdownMenuItem(text = { Text("Hacer una foto") }, onClick = { menuRetrato = false; selector(true) })
-                    if (p.fotoPath != null) DropdownMenuItem(text = { Text("Quitar retrato") }, onClick = { menuRetrato = false; vm.quitarRetrato() })
+                    DropdownMenuItem(text = { Text("Elegir de la galería", style = Tipos.ui, color = c.tinta) }, onClick = { menuRetrato = false; selector(false) })
+                    DropdownMenuItem(text = { Text("Hacer una foto", style = Tipos.ui, color = c.tinta) }, onClick = { menuRetrato = false; selector(true) })
+                    if (p.fotoPath != null) DropdownMenuItem(text = { Text("Quitar retrato", style = Tipos.ui, color = c.sangre) }, onClick = { menuRetrato = false; vm.quitarRetrato() })
                 }
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(p.nombre, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.primary)
-                Text(
-                    h.nombreClase + (h.secundaria?.let { " / ${it.nombre} ${h.nivelSecundario}" } ?: "") + " · Nivel ${h.nivel}",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Text(h.nombreEspecie, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            Text(p.nombre, style = Tipos.tituloLg, color = c.tinta, modifier = Modifier.padding(top = 16.dp))
+            Text(
+                h.nombreClase + (h.secundaria?.let { " / ${it.nombre} ${h.nivelSecundario}" } ?: "") + " · Nivel ${h.nivel}",
+                style = Tipos.ui, color = c.tinta
+            )
+            Text(h.nombreEspecie, style = Tipos.uiSm, color = c.tintaSuave)
         }
-        Spacer(Modifier.height(8.dp))
+        Separador()
         FilaDato("Alineamiento", p.alineamiento)
         FilaDato("Deidad", p.deidad)
         FilaDato("Jugador", p.jugador)
@@ -152,57 +146,34 @@ private fun BloqueIdentidad(ui: HojaUi, vm: HojaViewModel, onEditar: () -> Unit)
 private fun BloqueExperiencia(ui: HojaUi, onAnadir: () -> Unit, onSubir: () -> Unit) {
     val p = ui.personaje
     val h = ui.hoja
-    SeccionCard("Experiencia") {
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text("${p.experiencia}", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-            Text(
-                h.xpSiguiente?.let { " / $it PX para nivel ${h.nivel + 1}" } ?: " PX",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 5.dp)
-            )
-        }
-        h.xpSiguiente?.let { sig ->
-            val desde = h.clase?.let { Progresion.xpParaNivel(it, h.secundaria, h.nivel) } ?: 0
-            val progreso = if (sig > desde) (p.experiencia - desde).toFloat() / (sig - desde) else 1f
-            LinearProgressIndicator(progress = { progreso.coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp))
-        }
-        if (h.puedeSubir) {
-            Text("¡Tienes PX suficientes para subir de nivel!", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
-            OutlinedButton(onClick = onAnadir) { Icon(Icons.Default.Add, null); Text("PX") }
-            if (h.puedeSubir) {
-                Button(onClick = onSubir) { Icon(Icons.Default.TrendingUp, null); Spacer(Modifier.width(6.dp)); Text("Subir de nivel") }
-            } else {
-                OutlinedButton(onClick = onSubir) { Text("Subir de nivel") }
-            }
+    Ventana("Experiencia") {
+        val desde = h.clase?.let { Progresion.xpParaNivel(it, h.secundaria, h.nivel) } ?: 0
+        BarraPx(p.experiencia, desde, h.xpSiguiente, h.nivel)
+        Column(Modifier.fillMaxWidth().padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Cuando hay PX suficientes, «Subir de nivel» es la llamada a la acción y late
+            Boton("Subir de nivel", onSubir, variante = if (h.puedeSubir) Variante.DORADO else Variante.FANTASMA, brillo = h.puedeSubir, bloque = true)
+            Boton("PX", onAnadir, icono = Glifo.MAS, descripcion = "Añadir PX", bloque = true)
         }
     }
 }
 
 @Composable
 private fun BloqueCaracteristicas(ui: HojaUi, onClick: (CaracteristicaHoja) -> Unit) {
-    SeccionCard("Características") {
-        ui.hoja.caracteristicas.forEachIndexed { i, c ->
-            if (i > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-            val color = colorAtributo(c.atributo)
-            Row(
-                Modifier.fillMaxWidth().clickable { onClick(c) }.padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(c.atributo.abrev, color = color, fontWeight = FontWeight.Bold, modifier = Modifier.width(44.dp))
-                Text(c.atributo.nombre, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-                if (c.primaria) Icon(Icons.Default.Star, "Primaria", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(8.dp))
-                Column(horizontalAlignment = Alignment.End, modifier = Modifier.width(48.dp)) {
-                    Text("${c.puntuacion}", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                    if (c.puntuacion != c.base) Text("(${c.base})", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Spacer(Modifier.width(8.dp))
-                Row(Modifier.width(52.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    if (c.modForzado) Icon(Icons.Default.Edit, "Modificador fijado a mano", Modifier.size(12.dp), tint = color)
-                    Text(signo(c.mod), color = color, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+    val c = Marca.colores
+    Ventana("Características") {
+        // 3 × 2 en móvil, 6 × 1 cuando cabe; siempre FUE, DES, CON, INT, SAB, CAR
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val porFila = if (maxWidth >= 560.dp) 6 else 3
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                ui.hoja.caracteristicas.chunked(porFila).forEach { fila ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
+                        fila.forEach { car ->
+                            EscudoCaracteristica(
+                                car.atributo, car.puntuacion, car.base, car.mod, car.primaria, car.modForzado,
+                                Modifier.weight(1f), conNombre = porFila == 6, onClick = { onClick(car) }
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -210,8 +181,9 @@ private fun BloqueCaracteristicas(ui: HojaUi, onClick: (CaracteristicaHoja) -> U
         if (extra != null) {
             Text(
                 "Incluye los modificadores de ${ui.hoja.nombreEspecie.lowercase()}: " + extra.entries.joinToString { "${it.key.abrev} ${signo(it.value)}" },
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = Tipos.cuerpoSm,
+                color = c.tintaSuave,
+                modifier = Modifier.padding(top = 12.dp)
             )
         }
     }
@@ -219,41 +191,38 @@ private fun BloqueCaracteristicas(ui: HojaUi, onClick: (CaracteristicaHoja) -> U
 
 @Composable
 private fun BloqueHabilidades(habilidades: List<Habilidad>, onEditar: (Habilidad) -> Unit) {
-    SeccionCard("Habilidades y rasgos", accion = {
-        IconButton(onClick = { onEditar(Habilidad(personajeId = 0, nombre = "")) }, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Add, "Añadir habilidad", tint = MaterialTheme.colorScheme.primary)
-        }
+    val c = Marca.colores
+    Ventana("Habilidades y rasgos", accion = {
+        BotonIcono({ onEditar(Habilidad(personajeId = 0, nombre = "")) }, "Añadir habilidad") { IconoGlifo(Glifo.MAS) }
     }) {
         val grupos = listOf(
             Habilidad.ORIGEN_CLASE to "De clase",
             Habilidad.ORIGEN_ESPECIE to "De especie",
             Habilidad.ORIGEN_PROPIA to "Otras"
         )
-        if (habilidades.isEmpty()) Text("Sin habilidades", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        grupos.forEach { (origen, titulo) ->
-            val lista = habilidades.filter { it.origen == origen }
-            if (lista.isEmpty()) return@forEach
-            Text(titulo, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp, bottom = 2.dp))
-            lista.forEach { h ->
+        if (habilidades.isEmpty()) Text("Sin habilidades", style = Tipos.lore, color = c.tintaSuave)
+        grupos.filter { (origen, _) -> habilidades.any { it.origen == origen } }.forEachIndexed { g, (origen, titulo) ->
+            if (g > 0) Separador()
+            Subtitulo(titulo, Modifier.padding(bottom = 4.dp))
+            habilidades.filter { it.origen == origen }.forEachIndexed { i, h ->
+                if (i > 0) Filete()
                 var abierta by remember(h.id) { mutableStateOf(false) }
-                Column(Modifier.fillMaxWidth().clickable { abierta = !abierta }.padding(vertical = 6.dp)) {
+                Column(Modifier.fillMaxWidth().clickable(onClickLabel = if (abierta) "Plegar" else "Desplegar") { abierta = !abierta }.padding(vertical = 4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(h.nombre, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                        Text(h.nombre, style = Tipos.ui, color = c.tinta, modifier = Modifier.weight(1f))
                         h.atributo?.let { abrev ->
                             val a = Atributo.fromAbrev(abrev)
-                            Text(abrev, color = a?.let { colorAtributo(it) } ?: MaterialTheme.colorScheme.outline, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Text(abrev, style = Tipos.etiquetaCaps, color = a?.let { colorAtributo(it) } ?: c.tintaSuave)
                         }
-                        IconButton(onClick = { onEditar(h) }, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Default.Edit, "Editar", Modifier.size(14.dp), tint = MaterialTheme.colorScheme.outline)
-                        }
+                        BotonIcono({ onEditar(h) }, "Editar ${h.nombre}") { IconoGlifo(Glifo.LAPIZ, tamano = 16.dp) }
                     }
                     if (h.descripcion.isNotBlank()) {
                         Text(
                             h.descripcion,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            style = Tipos.cuerpoSm,
+                            color = c.tintaSuave,
                             maxLines = if (abierta) Int.MAX_VALUE else 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -264,21 +233,18 @@ private fun BloqueHabilidades(habilidades: List<Habilidad>, onEditar: (Habilidad
 
 @Composable
 private fun BloqueBio(p: Personaje, onEditar: () -> Unit) {
-    SeccionCard("Descripción", accion = {
-        IconButton(onClick = onEditar, modifier = Modifier.size(32.dp)) {
-            Icon(Icons.Default.Edit, "Editar", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.outline)
-        }
-    }) {
+    val c = Marca.colores
+    Ventana("Descripción", accion = { BotonIcono(onEditar, "Editar descripción") { IconoGlifo(Glifo.LAPIZ) } }) {
         val apariencia = listOf("Edad" to p.edad, "Género" to p.genero, "Altura" to p.altura, "Peso" to p.peso, "Ojos" to p.ojos, "Cabello" to p.cabello)
         apariencia.forEach { (k, v) -> FilaDato(k, v) }
         listOf("Descripción" to p.descripcion, "Personalidad" to p.personalidad, "Trasfondo" to p.trasfondo, "Cicatrices" to p.cicatrices).forEach { (k, v) ->
             if (v.isNotBlank()) {
-                Text(k, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 6.dp))
-                Text(v, style = MaterialTheme.typography.bodyMedium)
+                Subtitulo(k, Modifier.padding(top = 12.dp, bottom = 2.dp))
+                Text(v, style = Tipos.cuerpo, color = c.tinta)
             }
         }
         if (apariencia.all { it.second.isBlank() } && p.descripcion.isBlank() && p.personalidad.isBlank() && p.trasfondo.isBlank() && p.cicatrices.isBlank()) {
-            Text("Pulsa el lápiz para describir a tu personaje.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text("Pulsa el lápiz para describir a tu personaje.", style = Tipos.lore, color = c.tintaSuave)
         }
     }
 }
@@ -296,17 +262,14 @@ private fun IdentidadDialog(p: Personaje, onDismiss: () -> Unit, onGuardar: (Per
         onGuardar = { onGuardar(e.copy(nombre = e.nombre.trim(), nivel = (nivelTxt.toIntOrNull() ?: e.nivel).coerceIn(1, Progresion.NIVEL_MAXIMO))) },
         guardarActivo = e.nombre.isNotBlank()
     ) {
-        OutlinedTextField(e.nombre, { e = e.copy(nombre = it) }, label = { Text("Nombre") }, singleLine = true)
+        Campo(e.nombre, { e = e.copy(nombre = it) }, "Nombre")
         Desplegable("Clase", clases, clases.firstOrNull { it.id == e.claseId }, { it.nombre }, { e = e.copy(claseId = it.id) })
         if (e.claseId == PERSONALIZADA) {
-            OutlinedTextField(e.claseNombre, { e = e.copy(claseNombre = it) }, label = { Text("Nombre de la clase") }, singleLine = true)
+            Campo(e.claseNombre, { e = e.copy(claseNombre = it) }, "Nombre de la clase")
         } else {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("Multiclase", Modifier.weight(1f))
-                Switch(e.claseSecundariaId != null, { on ->
-                    e = e.copy(claseSecundariaId = if (on) Clases.todas.first { it.id != e.claseId }.id else null)
-                })
-            }
+            Casilla(e.claseSecundariaId != null, { on ->
+                e = e.copy(claseSecundariaId = if (on) Clases.todas.first { it.id != e.claseId }.id else null)
+            }, etiqueta = "Multiclase")
             if (e.claseSecundariaId != null) {
                 val sec = clases.filter { it.id != e.claseId && it.id != PERSONALIZADA }
                 Desplegable("Clase secundaria", sec, sec.firstOrNull { it.id == e.claseSecundariaId }, { it.nombre }, { e = e.copy(claseSecundariaId = it.id) })
@@ -314,7 +277,7 @@ private fun IdentidadDialog(p: Personaje, onDismiss: () -> Unit, onGuardar: (Per
         }
         Desplegable("Especie", especies, especies.firstOrNull { it.id == e.especieId }, { it.nombre }, { e = e.copy(especieId = it.id) })
         if (e.especieId == PERSONALIZADA) {
-            OutlinedTextField(e.especieNombre, { e = e.copy(especieNombre = it) }, label = { Text("Nombre de la especie") }, singleLine = true)
+            Campo(e.especieNombre, { e = e.copy(especieNombre = it) }, "Nombre de la especie")
         }
         CampoNumero(nivelTxt, { nivelTxt = it }, "Nivel", soporte = "Cambiarlo aquí no suma PG; usa «Subir de nivel»")
         Desplegable(
@@ -322,9 +285,9 @@ private fun IdentidadDialog(p: Personaje, onDismiss: () -> Unit, onGuardar: (Per
             soporte = Alineamientos.aviso(Clases.porId(e.claseId), e.alineamiento)
         )
         DesplegableEditable("Deidad", e.deidad, Alineamientos.deidades, { e = e.copy(deidad = it) })
-        OutlinedTextField(e.idiomas, { e = e.copy(idiomas = it) }, label = { Text("Idiomas") })
-        OutlinedTextField(e.jugador, { e = e.copy(jugador = it) }, label = { Text("Jugador") }, singleLine = true)
-        OutlinedTextField(e.lugarOrigen, { e = e.copy(lugarOrigen = it) }, label = { Text("Lugar de origen") }, singleLine = true)
+        Campo(e.idiomas, { e = e.copy(idiomas = it) }, "Idiomas", unaLinea = false)
+        Campo(e.jugador, { e = e.copy(jugador = it) }, "Jugador")
+        Campo(e.lugarOrigen, { e = e.copy(lugarOrigen = it) }, "Lugar de origen")
     }
 }
 
@@ -333,21 +296,21 @@ private fun BioDialog(p: Personaje, onDismiss: () -> Unit, onGuardar: (Personaje
     var e by remember { mutableStateOf(p) }
     FormularioDialog("Descripción", onDismiss = onDismiss, onGuardar = { onGuardar(e) }) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(e.edad, { e = e.copy(edad = it) }, label = { Text("Edad") }, singleLine = true, modifier = Modifier.weight(1f))
-            OutlinedTextField(e.genero, { e = e.copy(genero = it) }, label = { Text("Género") }, singleLine = true, modifier = Modifier.weight(1f))
+            Campo(e.edad, { e = e.copy(edad = it) }, "Edad", Modifier.weight(1f))
+            Campo(e.genero, { e = e.copy(genero = it) }, "Género", Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(e.altura, { e = e.copy(altura = it) }, label = { Text("Altura") }, singleLine = true, modifier = Modifier.weight(1f))
-            OutlinedTextField(e.peso, { e = e.copy(peso = it) }, label = { Text("Peso") }, singleLine = true, modifier = Modifier.weight(1f))
+            Campo(e.altura, { e = e.copy(altura = it) }, "Altura", Modifier.weight(1f))
+            Campo(e.peso, { e = e.copy(peso = it) }, "Peso", Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(e.ojos, { e = e.copy(ojos = it) }, label = { Text("Ojos") }, singleLine = true, modifier = Modifier.weight(1f))
-            OutlinedTextField(e.cabello, { e = e.copy(cabello = it) }, label = { Text("Cabello") }, singleLine = true, modifier = Modifier.weight(1f))
+            Campo(e.ojos, { e = e.copy(ojos = it) }, "Ojos", Modifier.weight(1f))
+            Campo(e.cabello, { e = e.copy(cabello = it) }, "Cabello", Modifier.weight(1f))
         }
-        OutlinedTextField(e.descripcion, { e = e.copy(descripcion = it) }, label = { Text("Descripción") }, minLines = 2)
-        OutlinedTextField(e.personalidad, { e = e.copy(personalidad = it) }, label = { Text("Personalidad") }, minLines = 2)
-        OutlinedTextField(e.trasfondo, { e = e.copy(trasfondo = it) }, label = { Text("Trasfondo") }, minLines = 2)
-        OutlinedTextField(e.cicatrices, { e = e.copy(cicatrices = it) }, label = { Text("Cicatrices") })
+        Campo(e.descripcion, { e = e.copy(descripcion = it) }, "Descripción", unaLinea = false, minLineas = 2)
+        Campo(e.personalidad, { e = e.copy(personalidad = it) }, "Personalidad", unaLinea = false, minLineas = 2)
+        Campo(e.trasfondo, { e = e.copy(trasfondo = it) }, "Trasfondo", unaLinea = false, minLineas = 2)
+        Campo(e.cicatrices, { e = e.copy(cicatrices = it) }, "Cicatrices", unaLinea = false)
     }
 }
 
@@ -367,12 +330,9 @@ private fun CaracteristicaDialog(c: CaracteristicaHoja, ui: HojaUi, vm: HojaView
         onDismiss()
     }) {
         CampoNumero(base, { base = it }, "Puntuación tirada", soporte = if (modEsp != 0) "Con especie: $ajustada (${signo(modEsp)})" else null)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(primaria, { primaria = it })
-            Text("Primaria (ND 12 en vez de 18)")
-        }
+        Casilla(primaria, { primaria = it }, etiqueta = "Primaria (ND 12 en vez de 18)")
         if (ui.hoja.clase?.principal == c.atributo && !primaria) {
-            Text("Es la característica principal de tu clase.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            Text("Es la característica principal de tu clase.", style = Tipos.caption, color = Marca.colores.sangre)
         }
         CampoNumero(mod, { mod = it }, "Modificador fijado a mano", negativos = true, soporte = "Vacío = según la tabla (${signo(Modifiers.modifier(ajustada))})")
     }
@@ -381,6 +341,7 @@ private fun CaracteristicaDialog(c: CaracteristicaHoja, ui: HojaUi, vm: HojaView
 @Composable
 private fun SubirNivelDialog(ui: HojaUi, onDismiss: () -> Unit, onConfirmar: (nivel: Int, pg: Int) -> Unit) {
     val h = ui.hoja
+    val c = Marca.colores
     val nuevo = h.nivel + 1
     var tirada by remember { mutableStateOf("") }
     val clase = h.clase
@@ -416,14 +377,14 @@ private fun SubirNivelDialog(ui: HojaUi, onDismiss: () -> Unit, onConfirmar: (ni
             nuevo <= 12 -> Text("A partir del nivel 11 ya no se tira dado: ganas $fijos PG fijos.")
             else -> Text("Después del nivel 12 no se ganan más PG ni BA, pero el nivel sigue contando para tiradas y salvaciones.")
         }
-        HorizontalDivider()
-        Text("PG: ${ui.estado.pgMaximos} → ${ui.estado.pgMaximos + pg} (+$pg)", fontWeight = FontWeight.Bold)
+        Separador(compacto = true)
+        Text("PG: ${ui.estado.pgMaximos} → ${ui.estado.pgMaximos + pg} (+$pg)", style = Tipos.cifraMd, color = c.tinta)
         if (clase != null) {
             val baNuevo = Progresion.ba(clase, h.secundaria, nuevo)
-            Text("BA: ${signo(Progresion.ba(clase, h.secundaria, h.nivel))} → ${signo(baNuevo)}")
+            Text("BA: ${signo(Progresion.ba(clase, h.secundaria, h.nivel))} → ${signo(baNuevo)}", style = Tipos.cifraMd, color = c.oro)
             val nuevas = (clase.habilidades.filter { it.nivel == nuevo }).map { it.nombre }
             if (nuevas.isNotEmpty()) Text("Nuevas habilidades: ${nuevas.joinToString()}")
-            if (h.esLanzador) Text("Los espacios de conjuro se actualizan solos.", style = MaterialTheme.typography.bodySmall)
+            if (h.esLanzador) Text("Los espacios de conjuro se actualizan solos.", style = Tipos.cuerpoSm, color = c.tintaSuave)
         }
     }
 }
@@ -438,15 +399,15 @@ private fun HabilidadDialog(h: Habilidad, onDismiss: () -> Unit, onGuardar: (Hab
         onGuardar = { onGuardar(e.copy(nombre = e.nombre.trim())) },
         guardarActivo = e.nombre.isNotBlank(),
         extraBoton = if (h.id != 0L) {
-            { TextButton(onClick = onEliminar) { Text("Eliminar", color = MaterialTheme.colorScheme.error) } }
+            { Boton("Eliminar", onEliminar, variante = Variante.PELIGRO_DISCRETO) }
         } else null
     ) {
-        OutlinedTextField(e.nombre, { e = e.copy(nombre = it) }, label = { Text("Nombre") }, singleLine = true)
+        Campo(e.nombre, { e = e.copy(nombre = it) }, "Nombre")
         Desplegable(
             "Característica de la tirada", atributos, Atributo.fromAbrev(e.atributo),
             { it?.let { a -> "${a.abrev} · ${a.nombre}" } ?: "Ninguna" },
             { e = e.copy(atributo = it?.abrev) }
         )
-        OutlinedTextField(e.descripcion, { e = e.copy(descripcion = it) }, label = { Text("Descripción") }, minLines = 3)
+        Campo(e.descripcion, { e = e.copy(descripcion = it) }, "Descripción", unaLinea = false, minLineas = 3)
     }
 }

@@ -1,0 +1,1173 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 6,
+    "identityHash": "f4a9462ec21c3ef7347c31684b953260",
+    "entities": [
+      {
+        "tableName": "personaje",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nombre` TEXT NOT NULL, `jugador` TEXT NOT NULL, `claseId` TEXT NOT NULL, `claseNombre` TEXT NOT NULL, `claseSecundariaId` TEXT, `especieId` TEXT NOT NULL, `especieNombre` TEXT NOT NULL, `nivel` INTEGER NOT NULL, `experiencia` INTEGER NOT NULL, `alineamiento` TEXT NOT NULL, `deidad` TEXT NOT NULL, `lugarOrigen` TEXT NOT NULL, `idiomas` TEXT NOT NULL, `descripcion` TEXT NOT NULL, `personalidad` TEXT NOT NULL, `trasfondo` TEXT NOT NULL, `cicatrices` TEXT NOT NULL, `altura` TEXT NOT NULL, `peso` TEXT NOT NULL, `edad` TEXT NOT NULL, `genero` TEXT NOT NULL, `ojos` TEXT NOT NULL, `cabello` TEXT NOT NULL, `fotoPath` TEXT, `colorSemilla` INTEGER, `creado` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "jugador",
+            "columnName": "jugador",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "claseId",
+            "columnName": "claseId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "claseNombre",
+            "columnName": "claseNombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "claseSecundariaId",
+            "columnName": "claseSecundariaId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "especieId",
+            "columnName": "especieId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "especieNombre",
+            "columnName": "especieNombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nivel",
+            "columnName": "nivel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "experiencia",
+            "columnName": "experiencia",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alineamiento",
+            "columnName": "alineamiento",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "deidad",
+            "columnName": "deidad",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lugarOrigen",
+            "columnName": "lugarOrigen",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "idiomas",
+            "columnName": "idiomas",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descripcion",
+            "columnName": "descripcion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personalidad",
+            "columnName": "personalidad",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "trasfondo",
+            "columnName": "trasfondo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cicatrices",
+            "columnName": "cicatrices",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "altura",
+            "columnName": "altura",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "peso",
+            "columnName": "peso",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "edad",
+            "columnName": "edad",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "genero",
+            "columnName": "genero",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ojos",
+            "columnName": "ojos",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cabello",
+            "columnName": "cabello",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fotoPath",
+            "columnName": "fotoPath",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "colorSemilla",
+            "columnName": "colorSemilla",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "creado",
+            "columnName": "creado",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "caracteristicas",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`personajeId` INTEGER NOT NULL, `fue` INTEGER NOT NULL, `des` INTEGER NOT NULL, `con` INTEGER NOT NULL, `int_` INTEGER NOT NULL, `sab` INTEGER NOT NULL, `car` INTEGER NOT NULL, `fuePrimaria` INTEGER NOT NULL, `desPrimaria` INTEGER NOT NULL, `conPrimaria` INTEGER NOT NULL, `intPrimaria` INTEGER NOT NULL, `sabPrimaria` INTEGER NOT NULL, `carPrimaria` INTEGER NOT NULL, `fueOverrideMod` INTEGER, `desOverrideMod` INTEGER, `conOverrideMod` INTEGER, `intOverrideMod` INTEGER, `sabOverrideMod` INTEGER, `carOverrideMod` INTEGER, PRIMARY KEY(`personajeId`), FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fue",
+            "columnName": "fue",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "des",
+            "columnName": "des",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "con",
+            "columnName": "con",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "int_",
+            "columnName": "int_",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sab",
+            "columnName": "sab",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "car",
+            "columnName": "car",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fuePrimaria",
+            "columnName": "fuePrimaria",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "desPrimaria",
+            "columnName": "desPrimaria",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conPrimaria",
+            "columnName": "conPrimaria",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "intPrimaria",
+            "columnName": "intPrimaria",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sabPrimaria",
+            "columnName": "sabPrimaria",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "carPrimaria",
+            "columnName": "carPrimaria",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fueOverrideMod",
+            "columnName": "fueOverrideMod",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "desOverrideMod",
+            "columnName": "desOverrideMod",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "conOverrideMod",
+            "columnName": "conOverrideMod",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "intOverrideMod",
+            "columnName": "intOverrideMod",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "sabOverrideMod",
+            "columnName": "sabOverrideMod",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "carOverrideMod",
+            "columnName": "carOverrideMod",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "personajeId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "estado",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`personajeId` INTEGER NOT NULL, `pgActuales` INTEGER NOT NULL, `pgMaximos` INTEGER NOT NULL, `dgOverride` TEXT, `baOverride` INTEGER, `caOtros` INTEGER NOT NULL, `caOverride` INTEGER, `movOverride` INTEGER, `danoAtenuado` INTEGER NOT NULL DEFAULT 0, `otrosAtaques` TEXT NOT NULL DEFAULT '', PRIMARY KEY(`personajeId`), FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pgActuales",
+            "columnName": "pgActuales",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pgMaximos",
+            "columnName": "pgMaximos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dgOverride",
+            "columnName": "dgOverride",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "baOverride",
+            "columnName": "baOverride",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "caOtros",
+            "columnName": "caOtros",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "caOverride",
+            "columnName": "caOverride",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "movOverride",
+            "columnName": "movOverride",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "danoAtenuado",
+            "columnName": "danoAtenuado",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "0"
+          },
+          {
+            "fieldPath": "otrosAtaques",
+            "columnName": "otrosAtaques",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "personajeId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "objeto",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personajeId` INTEGER NOT NULL, `categoria` TEXT NOT NULL, `catalogId` TEXT, `nombre` TEXT NOT NULL, `cantidad` INTEGER NOT NULL, `ve` REAL NOT NULL, `equipado` INTEGER NOT NULL, `contenedorId` INTEGER, `companiaId` INTEGER, `capacidad` INTEGER, `formulaDano` TEXT NOT NULL, `formulaDanoDosManos` TEXT NOT NULL, `tipoArma` TEXT NOT NULL, `alcance` INTEGER, `dosManos` INTEGER NOT NULL, `ca` INTEGER NOT NULL, `bonoMagico` INTEGER NOT NULL, `esMagico` INTEGER NOT NULL, `notas` TEXT NOT NULL, `conjuroId` INTEGER, FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "categoria",
+            "columnName": "categoria",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "catalogId",
+            "columnName": "catalogId",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cantidad",
+            "columnName": "cantidad",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ve",
+            "columnName": "ve",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "equipado",
+            "columnName": "equipado",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contenedorId",
+            "columnName": "contenedorId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "companiaId",
+            "columnName": "companiaId",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "capacidad",
+            "columnName": "capacidad",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "formulaDano",
+            "columnName": "formulaDano",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "formulaDanoDosManos",
+            "columnName": "formulaDanoDosManos",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipoArma",
+            "columnName": "tipoArma",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alcance",
+            "columnName": "alcance",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "dosManos",
+            "columnName": "dosManos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ca",
+            "columnName": "ca",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bonoMagico",
+            "columnName": "bonoMagico",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "esMagico",
+            "columnName": "esMagico",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "notas",
+            "columnName": "notas",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conjuroId",
+            "columnName": "conjuroId",
+            "affinity": "INTEGER",
+            "notNull": false
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_objeto_personajeId",
+            "unique": false,
+            "columnNames": [
+              "personajeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_objeto_personajeId` ON `${TABLE_NAME}` (`personajeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "tesoro",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`personajeId` INTEGER NOT NULL, `cobre` INTEGER NOT NULL, `plata` INTEGER NOT NULL, `electro` INTEGER NOT NULL, `oro` INTEGER NOT NULL, `platino` INTEGER NOT NULL, `gemas` TEXT NOT NULL, PRIMARY KEY(`personajeId`), FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cobre",
+            "columnName": "cobre",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "plata",
+            "columnName": "plata",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "electro",
+            "columnName": "electro",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oro",
+            "columnName": "oro",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "platino",
+            "columnName": "platino",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gemas",
+            "columnName": "gemas",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "personajeId"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "habilidad",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personajeId` INTEGER NOT NULL, `origen` TEXT NOT NULL, `nombre` TEXT NOT NULL, `atributo` TEXT, `descripcion` TEXT NOT NULL, `oculta` INTEGER NOT NULL, FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "origen",
+            "columnName": "origen",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "atributo",
+            "columnName": "atributo",
+            "affinity": "TEXT",
+            "notNull": false
+          },
+          {
+            "fieldPath": "descripcion",
+            "columnName": "descripcion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "oculta",
+            "columnName": "oculta",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_habilidad_personajeId",
+            "unique": false,
+            "columnNames": [
+              "personajeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_habilidad_personajeId` ON `${TABLE_NAME}` (`personajeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "condicion",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personajeId` INTEGER NOT NULL, `nombre` TEXT NOT NULL, `nota` TEXT NOT NULL, FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nota",
+            "columnName": "nota",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_condicion_personajeId",
+            "unique": false,
+            "columnNames": [
+              "personajeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_condicion_personajeId` ON `${TABLE_NAME}` (`personajeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "compania",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personajeId` INTEGER NOT NULL, `tipo` TEXT NOT NULL, `nombre` TEXT NOT NULL, `especie` TEXT NOT NULL, `movimiento` TEXT NOT NULL, `ataque` TEXT NOT NULL, `pgActuales` INTEGER NOT NULL, `pgMaximos` INTEGER NOT NULL, `ca` INTEGER NOT NULL, `habilidades` TEXT NOT NULL, `capacidadVe` INTEGER NOT NULL, FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tipo",
+            "columnName": "tipo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "especie",
+            "columnName": "especie",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "movimiento",
+            "columnName": "movimiento",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ataque",
+            "columnName": "ataque",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pgActuales",
+            "columnName": "pgActuales",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pgMaximos",
+            "columnName": "pgMaximos",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ca",
+            "columnName": "ca",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "habilidades",
+            "columnName": "habilidades",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "capacidadVe",
+            "columnName": "capacidadVe",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_compania_personajeId",
+            "unique": false,
+            "columnNames": [
+              "personajeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_compania_personajeId` ON `${TABLE_NAME}` (`personajeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "conjuro",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `nombre` TEXT NOT NULL, `niveles` TEXT NOT NULL, `tl` TEXT NOT NULL, `componentes` TEXT NOT NULL, `alcance` TEXT NOT NULL, `duracion` TEXT NOT NULL, `ts` TEXT NOT NULL, `rc` TEXT NOT NULL, `descripcion` TEXT NOT NULL, `esPropio` INTEGER NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nombre",
+            "columnName": "nombre",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "niveles",
+            "columnName": "niveles",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "tl",
+            "columnName": "tl",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "componentes",
+            "columnName": "componentes",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alcance",
+            "columnName": "alcance",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "duracion",
+            "columnName": "duracion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ts",
+            "columnName": "ts",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rc",
+            "columnName": "rc",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "descripcion",
+            "columnName": "descripcion",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "esPropio",
+            "columnName": "esPropio",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_conjuro_nombre",
+            "unique": false,
+            "columnNames": [
+              "nombre"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_conjuro_nombre` ON `${TABLE_NAME}` (`nombre`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "conjuro_personaje",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`personajeId` INTEGER NOT NULL, `conjuroId` INTEGER NOT NULL, `nivel` INTEGER NOT NULL, `preparadoVeces` INTEGER NOT NULL, `usadoVeces` INTEGER NOT NULL, PRIMARY KEY(`personajeId`, `conjuroId`), FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , FOREIGN KEY(`conjuroId`) REFERENCES `conjuro`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "conjuroId",
+            "columnName": "conjuroId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nivel",
+            "columnName": "nivel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "preparadoVeces",
+            "columnName": "preparadoVeces",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "usadoVeces",
+            "columnName": "usadoVeces",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "personajeId",
+            "conjuroId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_conjuro_personaje_conjuroId",
+            "unique": false,
+            "columnNames": [
+              "conjuroId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_conjuro_personaje_conjuroId` ON `${TABLE_NAME}` (`conjuroId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          },
+          {
+            "table": "conjuro",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "conjuroId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "espacio_override",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`personajeId` INTEGER NOT NULL, `nivel` INTEGER NOT NULL, `total` INTEGER NOT NULL, PRIMARY KEY(`personajeId`, `nivel`), FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nivel",
+            "columnName": "nivel",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "total",
+            "columnName": "total",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "personajeId",
+            "nivel"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "nota",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `personajeId` INTEGER NOT NULL, `titulo` TEXT NOT NULL, `contenido` TEXT NOT NULL, `timestamp` INTEGER NOT NULL, FOREIGN KEY(`personajeId`) REFERENCES `personaje`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "personajeId",
+            "columnName": "personajeId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "titulo",
+            "columnName": "titulo",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contenido",
+            "columnName": "contenido",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timestamp",
+            "columnName": "timestamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_nota_personajeId",
+            "unique": false,
+            "columnNames": [
+              "personajeId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_nota_personajeId` ON `${TABLE_NAME}` (`personajeId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "personaje",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "personajeId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f4a9462ec21c3ef7347c31684b953260')"
+    ]
+  }
+}

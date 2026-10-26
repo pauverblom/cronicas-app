@@ -3,12 +3,17 @@
 
 Uso:
     python3 scripts/generar_ilustraciones.py LORE/Cronicasdelamarca.pdf app/src/main/assets/ilustraciones DIR_ORIGINALES \\
-        [--solo id1,id2] [--modelo gemini-3-pro-image]
+        [--solo id1,id2] [--modelo gemini-3-pro-image] [--paquete | --procesar]
 
 Lee GEMINI_API_KEY del entorno o de ~/.gemini/.env. Ejecutar después de extract_ilustraciones.py, que genera las
 referencias. Guarda el PNG original de Gemini en DIR_ORIGINALES y la versión procesada (tinta en escala de grises,
 fondo transparente, recortada, WebP) en la carpeta de assets con el nombre que espera la app.
 Las ilustraciones generadas así están listadas en GENERADAS para distinguirlas de las de los libros.
+
+Sin API (a mano, en la app de Gemini):
+    --paquete   crea DIR_ORIGINALES/<id>/ con las referencias (ref_1.png…) y el texto a pegar (prompt.txt).
+    --procesar  toma la imagen descargada que se deje en cada DIR_ORIGINALES/<id>/ (cualquier PNG/JPG/WebP que
+                no sea ref_*) y la procesa igual que la API a la carpeta de assets.
 """
 import base64
 import io
@@ -27,7 +32,7 @@ ESTILO = (
     "Draw it in exactly the same style as the reference illustration(s): black ink line art for a tabletop RPG "
     "rulebook, confident outlines, hatching and halftone dot shading, no colour, on a pure white background. "
     "A single subject, centred, fully visible, with generous white margin. "
-    "No text, no letters, no signature, no frame, no border, no background scenery"
+    "No text or letters other than any badge asked for above, no signature, no frame, no border, no background scenery"
 )
 
 # id -> (referencias en assets, descripción, relación de aspecto)
@@ -102,9 +107,13 @@ def png_referencia(ref, assets, pdf, tmp):
     return buf.getvalue()
 
 
+def instruccion(descripcion):
+    return f"Create a new illustration of {descripcion}. {ESTILO}."
+
+
 def generar(clave, modelo, refs, descripcion, aspecto):
     partes = [{"inline_data": {"mime_type": "image/png", "data": base64.b64encode(r).decode()}} for r in refs]
-    partes.append({"text": f"Create a new illustration of {descripcion}. {ESTILO}."})
+    partes.append({"text": instruccion(descripcion)})
     cuerpo = {
         "contents": [{"parts": partes}],
         "generationConfig": {"responseModalities": ["IMAGE"], "imageConfig": {"aspectRatio": aspecto}},
@@ -140,8 +149,32 @@ def procesar(png, destino):
     rgba.save(destino, "WEBP", quality=80, method=6)
 
 
+def paquete(nombre, refs, descripcion, aspecto, carpeta):
+    """Referencias y texto para pedir la ilustración a mano en la app de Gemini (que no deja fijar el aspecto)."""
+    os.makedirs(carpeta, exist_ok=True)
+    for i, r in enumerate(refs, 1):
+        with open(os.path.join(carpeta, f"ref_{i}.png"), "wb") as f:
+            f.write(r)
+    adjuntas = "the attached reference illustration" if len(refs) == 1 else f"the {len(refs)} attached reference illustrations"
+    with open(os.path.join(carpeta, "prompt.txt"), "w") as f:
+        f.write(f"Using {adjuntas} as the style guide: {instruccion(descripcion)} "
+                f"Aspect ratio {aspecto}.\n")
+
+
+def descargada(carpeta):
+    """La imagen más reciente de la carpeta que no sea una referencia, o None."""
+    candidatas = [os.path.join(carpeta, f) for f in os.listdir(carpeta)
+                  if f.lower().endswith((".png", ".jpg", ".jpeg", ".webp")) and not f.startswith("ref_")]
+    return max(candidatas, key=os.path.getmtime) if candidatas else None
+
+
 def main():
     args = sys.argv[1:]
+    modo = "api"
+    for m in ("--paquete", "--procesar"):
+        if m in args:
+            modo = m[2:]
+            args.remove(m)
     solo = None
     modelo = "gemini-3-pro-image"
     if "--solo" in args:
@@ -154,13 +187,28 @@ def main():
         del args[i:i + 2]
     pdf, assets, originales = args
     os.makedirs(originales, exist_ok=True)
-    clave = clave_api()
+    clave = clave_api() if modo == "api" else None
     fallos = []
     with tempfile.TemporaryDirectory() as tmp:
         for nombre, (refs, descripcion, aspecto) in GENERADAS.items():
             if solo and nombre not in solo and nombre.split("_", 1)[1] not in solo:
                 continue
             try:
+                if modo == "paquete":
+                    paquete(nombre, [png_referencia(r, assets, pdf, tmp) for r in refs], descripcion, aspecto,
+                            os.path.join(originales, nombre))
+                    print("ok   ", nombre, file=sys.stderr)
+                    continue
+                if modo == "procesar":
+                    carpeta = os.path.join(originales, nombre)
+                    imagen = descargada(carpeta) if os.path.isdir(carpeta) else None
+                    if imagen is None:
+                        print("falta", nombre, file=sys.stderr)
+                        continue
+                    with open(imagen, "rb") as f:
+                        procesar(f.read(), os.path.join(assets, nombre + ".webp"))
+                    print("ok   ", nombre, file=sys.stderr)
+                    continue
                 png = generar(clave, modelo, [png_referencia(r, assets, pdf, tmp) for r in refs], descripcion, aspecto)
                 with open(os.path.join(originales, nombre + ".png"), "wb") as f:
                     f.write(png)
