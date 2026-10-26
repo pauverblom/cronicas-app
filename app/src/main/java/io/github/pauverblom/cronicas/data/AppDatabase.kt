@@ -4,6 +4,8 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 
 @Database(
     entities = [
@@ -20,7 +22,7 @@ import androidx.room.RoomDatabase
         EspacioOverride::class,
         Nota::class
     ],
-    version = 4
+    version = 5
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun personajeDao(): PersonajeDao
@@ -38,6 +40,13 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
+        /** Conjuro guardado en un pergamino. */
+        private val MIGRACION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE objeto ADD COLUMN conjuroId INTEGER")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 // La versión 4 rehace el esquema para la ficha de personaje: los datos de la 3 se descartan.
@@ -46,6 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cronicas_marca.db"
                 )
+                    .addMigrations(MIGRACION_4_5)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

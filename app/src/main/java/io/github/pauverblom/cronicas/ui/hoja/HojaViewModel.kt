@@ -142,6 +142,11 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
 
     fun eliminarObjeto(o: Objeto) = lanzar { repo.deleteObjeto(o) }
 
+    /** El pergamino se consume al leerlo, salga bien o mal la tirada. */
+    fun gastarPergamino(o: Objeto) = lanzar {
+        if (o.cantidad > 1) repo.updateObjeto(o.copy(cantidad = o.cantidad - 1)) else repo.deleteObjeto(o)
+    }
+
     /** Solo se puede llevar puesta una armadura, un escudo y un casco a la vez. */
     fun alternarEquipado(o: Objeto) = lanzar {
         val nuevo = o.copy(equipado = !o.equipado, companiaId = if (!o.equipado) null else o.companiaId, contenedorId = if (!o.equipado) null else o.contenedorId)
@@ -202,6 +207,9 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
         val id = repo.insertConjuro(c.copy(esPropio = true))
         repo.aprenderConjuro(pid, id, nivel)
     }
+
+    /** Conjuro propio que no se aprende, p. ej. el de un pergamino que da el Narrador. */
+    fun crearConjuroPropio(c: Conjuro, onFin: (Long) -> Unit) = lanzar { onFin(repo.insertConjuro(c.copy(esPropio = true))) }
 
     fun importarCsv(uri: Uri, onFin: (Int) -> Unit) = lanzar {
         val n = runCatching {

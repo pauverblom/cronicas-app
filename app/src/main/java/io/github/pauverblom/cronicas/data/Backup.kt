@@ -8,7 +8,7 @@ import java.io.File
 
 /**
  * Exporta e importa un personaje completo (con su retrato) como un único JSON.
- * Los conjuros se exportan enteros y al importar se enlazan por nombre con el catálogo.
+ * Los conjuros (también los de los pergaminos) se exportan enteros y al importar se enlazan por nombre con el catálogo.
  */
 object Backup {
 
@@ -31,7 +31,9 @@ object Backup {
         val conjuros: List<ConjuroExportado>,
         val espacios: List<EspacioOverride>,
         val notas: List<Nota>,
-        val retratoBase64: String? = null
+        val retratoBase64: String? = null,
+        /** Conjuros guardados en pergaminos, con el id que referencia [Objeto.conjuroId]. */
+        val conjurosPergaminos: List<Conjuro> = emptyList()
     )
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -41,6 +43,7 @@ object Backup {
         val p = db.personajeDao().getById(pid) ?: error("Personaje $pid no existe")
         val conjuros = db.conjuroDao().getDePersonaje(pid)
         val porId = db.conjuroDao().getAllOnce().associateBy { it.id }
+        val objetos = db.objetoDao().getAll(pid)
         val retrato = p.fotoPath?.let { File(it) }?.takeIf { it.exists() }
             ?.let { Base64.encodeToString(it.readBytes(), Base64.NO_WRAP) }
         val export = PersonajeExportado(
@@ -48,7 +51,7 @@ object Backup {
             caracteristicas = db.caracteristicasDao().get(pid),
             estado = db.estadoDao().get(pid),
             tesoro = db.tesoroDao().get(pid),
-            objetos = db.objetoDao().getAll(pid),
+            objetos = objetos,
             habilidades = db.habilidadDao().getAll(pid),
             condiciones = db.condicionDao().getAll(pid),
             companias = db.companiaDao().getAll(pid),
@@ -57,7 +60,8 @@ object Backup {
             },
             espacios = db.conjuroDao().getEspacios(pid),
             notas = db.notaDao().getAll(pid),
-            retratoBase64 = retrato
+            retratoBase64 = retrato,
+            conjurosPergaminos = objetos.mapNotNull { it.conjuroId }.distinct().mapNotNull(porId::get)
         )
         return json.encodeToString(PersonajeExportado.serializer(), export)
     }
@@ -78,17 +82,20 @@ object Backup {
             db.estadoDao().upsert((e.estado ?: Estado(0)).copy(personajeId = pid))
             db.tesoroDao().upsert((e.tesoro ?: Tesoro(0)).copy(personajeId = pid))
 
+            suspend fun idConjuro(c: Conjuro): Long = db.conjuroDao().byName(c.nombre)?.id ?: db.conjuroDao().insert(c.copy(id = 0, esPropio = true))
+            val pergaminos = e.conjurosPergaminos.associate { it.id to idConjuro(it) }
+            fun Objeto.importado(): Objeto = copy(id = 0, personajeId = pid, conjuroId = conjuroId?.let(pergaminos::get))
+
             // Monturas primero, para reenlazar la carga; luego contenedores y su contenido
             val companiaIds = e.companias.associate { it.id to db.companiaDao().insert(it.copy(id = 0, personajeId = pid)) }
             val objetoIds = mutableMapOf<Long, Long>()
             val (contenidos, resto) = e.objetos.partition { it.contenedorId != null }
             for (o in resto) {
-                objetoIds[o.id] = db.objetoDao().insert(o.copy(id = 0, personajeId = pid, companiaId = o.companiaId?.let(companiaIds::get)))
+                objetoIds[o.id] = db.objetoDao().insert(o.importado().copy(companiaId = o.companiaId?.let(companiaIds::get)))
             }
             for (o in contenidos) {
                 db.objetoDao().insert(
-                    o.copy(
-                        id = 0, personajeId = pid,
+                    o.importado().copy(
                         contenedorId = o.contenedorId?.let(objetoIds::get),
                         companiaId = o.companiaId?.let(companiaIds::get)
                     )
@@ -99,8 +106,7 @@ object Backup {
             e.notas.forEach { db.notaDao().insert(it.copy(id = 0, personajeId = pid)) }
             e.espacios.forEach { db.conjuroDao().upsertEspacio(it.copy(personajeId = pid)) }
             for (c in e.conjuros) {
-                val existente = db.conjuroDao().byName(c.conjuro.nombre)
-                val cid = existente?.id ?: db.conjuroDao().insert(c.conjuro.copy(id = 0, esPropio = true))
+                val cid = idConjuro(c.conjuro)
                 db.conjuroDao().insertDePersonaje(ConjuroPersonaje(pid, cid, c.nivel, c.preparadoVeces, c.usadoVeces))
             }
             pid

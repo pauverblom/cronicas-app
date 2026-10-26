@@ -184,7 +184,9 @@ data class Objeto(
     /** Bonificador mágico: al ataque y daño en armas, a la CA en armaduras y escudos. */
     val bonoMagico: Int = 0,
     val esMagico: Boolean = false,
-    val notas: String = ""
+    val notas: String = "",
+    /** Pergaminos: el [Conjuro] que contienen. Sin clave foránea, para no perder el objeto si se borra el conjuro. */
+    val conjuroId: Long? = null
 )
 
 @Serializable

@@ -66,7 +66,9 @@ import io.github.pauverblom.cronicas.ui.common.ConfirmarDialog
 import io.github.pauverblom.cronicas.ui.common.FormularioDialog
 import io.github.pauverblom.cronicas.ui.common.NumeroDialog
 
-private val NOMBRE_LISTA = mapOf("clerigo" to "Clérigo", "druida" to "Druida", "ilusionista" to "Ilusionista", "mago" to "Mago")
+/** [LISTA_PROPIA] guarda el nivel de los conjuros creados sin lista de clase. */
+private val NOMBRE_LISTA = mapOf("clerigo" to "Clérigo", "druida" to "Druida", "ilusionista" to "Ilusionista", "mago" to "Mago", LISTA_PROPIA to "Nivel")
+private const val LISTA_PROPIA = "propio"
 
 private enum class Vista(val titulo: String) { PREPARADOS("Preparados"), GRIMORIO("Conocidos"), CATALOGO("Catálogo") }
 
@@ -149,7 +151,7 @@ private fun FilaEspacios(m: MagiaHoja, conjuros: List<ConjuroConDetalle>, onForz
 }
 
 @Composable
-private fun DetallesConjuro(c: Conjuro) {
+fun DetallesConjuro(c: Conjuro) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         val niveles = c.nivelesPorClase.entries.joinToString { "${NOMBRE_LISTA[it.key] ?: it.key} ${it.value}" }
         if (niveles.isNotBlank()) Text(niveles, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
@@ -326,12 +328,12 @@ private fun ListaCatalogo(ui: HojaUi, vm: HojaViewModel, catalogo: List<Conjuro>
 }
 
 @Composable
-private fun NuevoConjuroDialog(lista: String?, onDismiss: () -> Unit, onGuardar: (Conjuro, Int) -> Unit) {
-    var c by remember { mutableStateOf(Conjuro(nombre = "")) }
+fun NuevoConjuroDialog(lista: String?, onDismiss: () -> Unit, nombre: String = "", onGuardar: (Conjuro, Int) -> Unit) {
+    var c by remember { mutableStateOf(Conjuro(nombre = nombre)) }
     var nivel by remember { mutableStateOf("1") }
     FormularioDialog("Nuevo conjuro", onDismiss = onDismiss, guardarActivo = c.nombre.isNotBlank(), onGuardar = {
         val n = (nivel.toIntOrNull() ?: 0).coerceIn(0, 9)
-        onGuardar(c.copy(nombre = c.nombre.trim(), niveles = lista?.let { Conjuro.formatNiveles(mapOf(it to n)) } ?: ""), n)
+        onGuardar(c.copy(nombre = c.nombre.trim(), niveles = Conjuro.formatNiveles(mapOf((lista ?: LISTA_PROPIA) to n))), n)
     }) {
         OutlinedTextField(c.nombre, { c = c.copy(nombre = it) }, label = { Text("Nombre") }, singleLine = true)
         CampoNumero(nivel, { nivel = it }, "Nivel (0-9)")

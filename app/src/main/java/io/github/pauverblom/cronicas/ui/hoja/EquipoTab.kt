@@ -43,6 +43,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +58,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.pauverblom.cronicas.data.Compania
+import io.github.pauverblom.cronicas.data.Conjuro
 import io.github.pauverblom.cronicas.data.Objeto
 import io.github.pauverblom.cronicas.data.Tesoro
 import io.github.pauverblom.cronicas.rules.Carga
@@ -76,11 +79,19 @@ import io.github.pauverblom.cronicas.ui.theme.LocalColoresHoja
 
 private val EQUIPABLES = setOf(Categoria.ARMA, Categoria.ARMADURA, Categoria.ESCUDO, Categoria.CASCO, Categoria.EQUIPO)
 
+/** Habilidad de clase que explica cómo se leen los pergaminos (la del Armónico de Hueso). */
+private const val HABILIDAD_PERGAMINOS = "Usar pergaminos de magia"
+
+private val Objeto.esPergamino: Boolean
+    get() = Categoria.of(categoria) == Categoria.EQUIPO &&
+        (conjuroId != null || catalogId == "pergamino" || nombre.contains("pergamino", ignoreCase = true))
+
 @Composable
 fun EquipoTab(ui: HojaUi, vm: HojaViewModel) {
     var catalogo by remember { mutableStateOf(false) }
     var editando by remember { mutableStateOf<Objeto?>(null) }
     var compania by remember { mutableStateOf<Compania?>(null) }
+    val conjuros by vm.catalogoConjuros.collectAsState()
 
     ColumnasHoja(
         izquierda = {
@@ -89,7 +100,7 @@ fun EquipoTab(ui: HojaUi, vm: HojaViewModel) {
             BloqueCompania(ui, onEditar = { compania = it })
         },
         derecha = {
-            BloqueInventario(ui, onAnadir = { catalogo = true }, onEditar = { editando = it }, onEquipar = vm::alternarEquipado)
+            BloqueInventario(ui, conjuros, onAnadir = { catalogo = true }, onEditar = { editando = it }, onEquipar = vm::alternarEquipado)
         }
     )
 
@@ -102,7 +113,14 @@ fun EquipoTab(ui: HojaUi, vm: HojaViewModel) {
         )
     }
     editando?.let { o ->
-        ObjetoDialog(o, ui, onDismiss = { editando = null }, onGuardar = { vm.guardarObjeto(it); editando = null }, onEliminar = { vm.eliminarObjeto(o); editando = null })
+        ObjetoDialog(
+            o, ui, conjuros,
+            onDismiss = { editando = null },
+            onGuardar = { vm.guardarObjeto(it); editando = null },
+            onEliminar = { vm.eliminarObjeto(o); editando = null },
+            onGastar = { vm.gastarPergamino(o); editando = null },
+            onCrearConjuro = vm::crearConjuroPropio
+        )
     }
     compania?.let { c ->
         CompaniaDialog(c, onDismiss = { compania = null }, onGuardar = { vm.guardarCompania(it); compania = null }, onEliminar = { vm.eliminarCompania(c); compania = null })
@@ -205,9 +223,10 @@ private fun BloqueMonedas(t: Tesoro, onGuardar: (Tesoro) -> Unit) {
 }
 
 @Composable
-private fun BloqueInventario(ui: HojaUi, onAnadir: () -> Unit, onEditar: (Objeto) -> Unit, onEquipar: (Objeto) -> Unit) {
+private fun BloqueInventario(ui: HojaUi, conjuros: List<Conjuro>, onAnadir: () -> Unit, onEditar: (Objeto) -> Unit, onEquipar: (Objeto) -> Unit) {
     val objetos = ui.objetos
     val companias = ui.companias.associateBy { it.id }
+    val nombresConjuros = conjuros.associate { it.id to it.nombre }
     SeccionCard("Inventario", accion = {
         IconButton(onClick = onAnadir, modifier = Modifier.size(32.dp)) { Icon(Icons.Default.Add, "Añadir objeto", tint = MaterialTheme.colorScheme.primary) }
     }) {
@@ -227,7 +246,7 @@ private fun BloqueInventario(ui: HojaUi, onAnadir: () -> Unit, onEditar: (Objeto
             if (lista.isEmpty()) return@forEach
             Text(titulo, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp, bottom = 2.dp))
             lista.forEach { o ->
-                FilaObjeto(o, companias[o.companiaId]?.nombre, onEditar, onEquipar)
+                FilaObjeto(o, companias[o.companiaId]?.nombre, nombresConjuros[o.conjuroId], onEditar, onEquipar)
                 if (Categoria.of(o.categoria) == Categoria.CONTENEDOR) {
                     val uso = ui.hoja.carga.usoContenedores[o.id] ?: 0f
                     o.capacidad?.let { cap ->
@@ -239,7 +258,7 @@ private fun BloqueInventario(ui: HojaUi, onAnadir: () -> Unit, onEditar: (Objeto
                         )
                     }
                     objetos.filter { it.contenedorId == o.id }.forEach { dentro ->
-                        Row(Modifier.padding(start = 16.dp)) { FilaObjeto(dentro, null, onEditar, onEquipar) }
+                        Row(Modifier.padding(start = 16.dp)) { FilaObjeto(dentro, null, nombresConjuros[dentro.conjuroId], onEditar, onEquipar) }
                     }
                 }
             }
@@ -248,7 +267,7 @@ private fun BloqueInventario(ui: HojaUi, onAnadir: () -> Unit, onEditar: (Objeto
 }
 
 @Composable
-private fun FilaObjeto(o: Objeto, montura: String?, onEditar: (Objeto) -> Unit, onEquipar: (Objeto) -> Unit) {
+private fun FilaObjeto(o: Objeto, montura: String?, conjuro: String?, onEditar: (Objeto) -> Unit, onEquipar: (Objeto) -> Unit) {
     val cat = Categoria.of(o.categoria)
     Row(Modifier.fillMaxWidth().clickable { onEditar(o) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
@@ -260,6 +279,7 @@ private fun FilaObjeto(o: Objeto, montura: String?, onEditar: (Objeto) -> Unit, 
                 overflow = TextOverflow.Ellipsis
             )
             val detalle = listOfNotNull(
+                conjuro?.let { "Conjuro: $it" },
                 o.formulaDano.takeIf { it.isNotBlank() }?.let { d -> if (o.formulaDanoDosManos.isNotBlank()) "$d / ${o.formulaDanoDosManos}" else d },
                 o.ca.takeIf { it != 0 && cat != Categoria.ARMA }?.let { "CA ${signo(it + o.bonoMagico)}" },
                 "VE ${formatoVe(if (cat == Categoria.CASCO && o.equipado) 0f else o.ve * o.cantidad)}",
@@ -448,7 +468,16 @@ private fun CatalogoSheet(
 // ── Diálogos de edición ──
 
 @Composable
-private fun ObjetoDialog(o: Objeto, ui: HojaUi, onDismiss: () -> Unit, onGuardar: (Objeto) -> Unit, onEliminar: () -> Unit) {
+private fun ObjetoDialog(
+    o: Objeto,
+    ui: HojaUi,
+    conjuros: List<Conjuro>,
+    onDismiss: () -> Unit,
+    onGuardar: (Objeto) -> Unit,
+    onEliminar: () -> Unit,
+    onGastar: () -> Unit,
+    onCrearConjuro: (Conjuro, (Long) -> Unit) -> Unit
+) {
     var e by remember { mutableStateOf(o) }
     var cantidad by remember { mutableStateOf(o.cantidad.toString()) }
     var ve by remember { mutableStateOf(formatoVe(o.ve)) }
@@ -457,6 +486,7 @@ private fun ObjetoDialog(o: Objeto, ui: HojaUi, onDismiss: () -> Unit, onGuardar
     var alcance by remember { mutableStateOf(o.alcance?.toString() ?: "") }
     var capacidad by remember { mutableStateOf(o.capacidad?.toString() ?: "") }
     var borrar by remember { mutableStateOf(false) }
+    var gastar by remember { mutableStateOf(false) }
     val cat = Categoria.of(e.categoria)
 
     // Ubicación: encima, dentro de un contenedor o cargado en una montura
@@ -535,10 +565,66 @@ private fun ObjetoDialog(o: Objeto, ui: HojaUi, onDismiss: () -> Unit, onGuardar
         Row(verticalAlignment = Alignment.CenterVertically) {
             Checkbox(e.esMagico, { e = e.copy(esMagico = it) }); Text("Objeto mágico")
         }
+        if (e.esPergamino) {
+            SeccionPergamino(e, o.id != 0L, ui, conjuros, onConjuro = { e = e.copy(conjuroId = it) }, onCrearConjuro, onGastar = { gastar = true })
+        }
         OutlinedTextField(e.notas, { e = e.copy(notas = it) }, label = { Text("Notas") })
+    }
+    if (gastar) {
+        ConfirmarDialog(
+            "Gastar pergamino",
+            "El pergamino se consume al leerlo, tanto si sale bien como si se hace polvo." + if (o.cantidad > 1) " Te quedarán ${o.cantidad - 1}." else "",
+            confirmar = "Gastar",
+            onDismiss = { gastar = false },
+            onConfirm = onGastar
+        )
     }
     if (borrar) {
         ConfirmarDialog("Eliminar objeto", "¿Eliminar ${o.nombre}?" + if (cat == Categoria.CONTENEDOR) " Su contenido pasará a llevarse encima." else "", onDismiss = { borrar = false }, onConfirm = onEliminar)
+    }
+}
+
+/** Conjuro que guarda el pergamino, la regla para leerlo y el botón para gastarlo. */
+@Composable
+private fun SeccionPergamino(
+    e: Objeto,
+    guardado: Boolean,
+    ui: HojaUi,
+    conjuros: List<Conjuro>,
+    onConjuro: (Long?) -> Unit,
+    onCrearConjuro: (Conjuro, (Long) -> Unit) -> Unit,
+    onGastar: () -> Unit
+) {
+    val actual = conjuros.firstOrNull { it.id == e.conjuroId }
+    var texto by remember { mutableStateOf("") }
+    // Muestra el nombre del conjuro enlazado (también cuando se acaba de crear y llega del catálogo)
+    LaunchedEffect(actual?.nombre) { actual?.let { texto = it.nombre } }
+    var crear by remember { mutableStateOf(false) }
+    val busqueda = texto.trim()
+    DesplegableEditable(
+        "Conjuro del pergamino", texto,
+        conjuros.filter { busqueda.isBlank() || it.nombre.contains(busqueda, ignoreCase = true) }.take(20).map { it.nombre },
+        onValor = { v ->
+            texto = v
+            onConjuro(conjuros.firstOrNull { it.nombre.equals(v.trim(), ignoreCase = true) }?.id)
+        }
+    )
+    if (actual != null) {
+        DetallesConjuro(actual)
+    } else if (busqueda.isNotBlank()) {
+        TextButton(onClick = { crear = true }) { Text("Crear «$busqueda» como conjuro del Narrador") }
+    }
+    ui.habilidades.firstOrNull { it.nombre == HABILIDAD_PERGAMINOS }?.let {
+        Text(it.descripcion, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    if (guardado) {
+        OutlinedButton(onClick = onGastar, modifier = Modifier.fillMaxWidth()) { Text("Gastar pergamino") }
+    }
+    if (crear) {
+        NuevoConjuroDialog(null, onDismiss = { crear = false }, nombre = busqueda) { c, _ ->
+            onCrearConjuro(c, onConjuro)
+            crear = false
+        }
     }
 }
 
