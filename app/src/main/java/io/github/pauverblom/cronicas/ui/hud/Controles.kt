@@ -31,7 +31,14 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -142,10 +149,10 @@ fun Boton(
         variante == Variante.PELIGRO_DISCRETO -> c.sangre
         else -> c.oro
     }
-    val pulso = if (brillo && activo) {
+    val pulso = if (brillo && activo && io.github.pauverblom.cronicas.ui.common.animacionesActivas()) {
         val t = rememberInfiniteTransition(label = "brillo")
-        t.animateFloat(0.45f, 1f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "pulso").value
-    } else 0f
+        t.animateFloat(0.45f, 1f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "pulso")
+    } else null
     val forma = when {
         !activo || !enmarcado -> formaPlaca(1f)
         variante == Variante.DORADO || variante == Variante.PELIGRO -> formaPlaca(1f, margenV = 7f, base = 20.5f, punta = 11.5f)
@@ -167,7 +174,7 @@ fun Boton(
             .clickable(interaccion, null, enabled = activo, role = Role.Button, onClick = onClick)
             .semantics { if (descripcion != null) contentDescription = descripcion }
             .drawBehind {
-                if (pulso > 0f) halo(formaPlaca(1f).contorno(this), c.metalMedio.copy(alpha = 0.55f * pulso), 10.dp.toPx())
+                if (pulso != null) halo(formaPlaca(1f).contorno(this), c.metalMedio.copy(alpha = 0.55f * pulso.value), 10.dp.toPx())
                 interior(c, forma, relleno)
                 if (enmarcado) marco(Orn.PLACA, (if (activo) Pintura.Metal else Pintura.Hierro).brocha(c), density)
             }
@@ -366,11 +373,23 @@ fun Campo(
     marcador: String? = null,
     teclado: KeyboardOptions = KeyboardOptions.Default,
     onClick: (() -> Unit)? = null,
-    final: (@Composable () -> Unit)? = null
+    final: (@Composable () -> Unit)? = null,
+    enfocarAlAbrir: Boolean = false
 ) {
     val c = Marca.colores
     val interaccion = remember { MutableInteractionSource() }
     val enfocado by interaccion.collectIsFocusedAsState()
+    // El texto con su selección: así un campo que se enfoca al abrir puede traer el valor ya seleccionado,
+    // y lo que se escribe lo sustituye en vez de añadirse delante («0» + «120» = «1200»)
+    var campo by remember { mutableStateOf(TextFieldValue(valor, TextRange(valor.length))) }
+    if (campo.text != valor) campo = campo.copy(text = valor, selection = TextRange(valor.length))
+    val foco = remember { FocusRequester() }
+    if (enfocarAlAbrir) {
+        LaunchedEffect(Unit) {
+            foco.requestFocus()
+            campo = campo.copy(selection = TextRange(0, campo.text.length))
+        }
+    }
     val multilinea = !unaLinea || minLineas > 1
     Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (etiqueta != null) EtiquetaCampo(etiqueta)
@@ -397,14 +416,18 @@ fun Campo(
                     Text(valor.ifEmpty { marcador.orEmpty() }, style = estilo, color = if (valor.isEmpty()) c.tintaTenue else c.tinta)
                 } else {
                     BasicTextField(
-                        valor, onValor,
+                        campo,
+                        { nuevo ->
+                            campo = nuevo
+                            if (nuevo.text != valor) onValor(nuevo.text)
+                        },
                         textStyle = estilo,
                         singleLine = unaLinea,
                         minLines = if (unaLinea) 1 else minLineas,
                         keyboardOptions = teclado,
                         cursorBrush = SolidColor(c.oro),
                         interactionSource = interaccion,
-                        modifier = Modifier.fillMaxWidth().semantics { if (etiqueta != null) contentDescription = etiqueta },
+                        modifier = Modifier.fillMaxWidth().focusRequester(foco).semantics { if (etiqueta != null) contentDescription = etiqueta },
                         decorationBox = { campo ->
                             if (valor.isEmpty() && marcador != null) Text(marcador, style = estilo, color = c.tintaTenue)
                             campo()
@@ -501,5 +524,39 @@ fun Etiqueta(
             )
             if (nota != null) Text(": $nota", style = Tipos.uiSm, color = c.tintaSuave, maxLines = 1)
         }
+    }
+}
+
+// ── Texto que se ajusta ──
+
+/**
+ * Muestra [completo] en una línea, encogiendo la letra desde la de [estilo] hasta [minimo] si hace falta; si ni así
+ * cabe, muestra [abreviado] al tamaño normal. Para poner la palabra entera («CONSTITUCIÓN») donde quepa.
+ */
+@Composable
+fun TextoAjustado(
+    completo: String,
+    abreviado: String,
+    estilo: TextStyle,
+    color: Color,
+    modifier: Modifier = Modifier,
+    minimo: androidx.compose.ui.unit.TextUnit = 8.sp,
+    textAlign: TextAlign? = null
+) {
+    val medidor = androidx.compose.ui.text.rememberTextMeasurer()
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier) {
+        val ancho = constraints.maxWidth
+        val elegido = remember(completo, abreviado, estilo, ancho) {
+            var tamano = estilo.fontSize.value
+            var res: Pair<String, TextStyle>? = null
+            while (tamano >= minimo.value) {
+                val e = estilo.copy(fontSize = tamano.sp)
+                if (medidor.measure(completo, e, maxLines = 1, softWrap = false).size.width <= ancho) { res = completo to e; break }
+                tamano -= 0.5f
+            }
+            res ?: (abreviado to estilo)
+        }
+        Text(elegido.first, style = elegido.second, color = color, maxLines = 1, softWrap = false, textAlign = textAlign,
+            modifier = if (textAlign != null) Modifier.fillMaxWidth() else Modifier)
     }
 }

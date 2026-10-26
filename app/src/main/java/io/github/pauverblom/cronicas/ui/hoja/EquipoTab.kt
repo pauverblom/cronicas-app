@@ -75,6 +75,9 @@ import io.github.pauverblom.cronicas.ui.hud.fondoNoche
 import io.github.pauverblom.cronicas.ui.theme.Marca
 import io.github.pauverblom.cronicas.ui.theme.Tipos
 
+/** Dinero que se tiene: «0» si no hay nada (el «—» de [Monedas.formato] es para lo que es gratis). */
+private fun dinero(mc: Int): String = if (mc == 0) "0" else Monedas.formato(mc)
+
 private val EQUIPABLES = setOf(Categoria.ARMA, Categoria.ARMADURA, Categoria.ESCUDO, Categoria.CASCO, Categoria.EQUIPO)
 
 /** Habilidad de clase que explica cómo se leen los pergaminos (la del Armónico de Hueso). */
@@ -143,8 +146,8 @@ private fun BloqueCarga(ui: HojaUi) {
             monedas = if (c.veMonedas > 0) "Monedas: ${formatoVe(c.veMonedas.toFloat())} VE (150 monedas = 1 VE)" else null
         )
         Text(
-            "Límite de carga = FUE${if (ui.hoja.car(Atributo.FUE).primaria) " +3" else ""}" +
-                "${if (ui.hoja.car(Atributo.CON).primaria) " +3 (CON)" else ""}. Media hasta ${c.limite * 3} VE.",
+            "Límite de carga = Fuerza${if (ui.hoja.car(Atributo.FUE).primaria) " +3" else ""}" +
+                "${if (ui.hoja.car(Atributo.CON).primaria) " +3 (Constitución)" else ""}. Media hasta ${c.limite * 3} VE.",
             style = Tipos.cuerpoSm,
             color = Marca.colores.tintaSuave,
             modifier = Modifier.padding(top = 8.dp)
@@ -175,7 +178,7 @@ private fun BloqueMonedas(t: Tesoro, onGuardar: (Tesoro) -> Unit) {
             cantidades,
             onCambio = { m, v -> onGuardar(con(m, v)) },
             onExacta = { editando = it },
-            total = Monedas.formato(Monedas.Bolsa(t.cobre, t.plata, t.electro, t.oro, t.platino).totalMc)
+            total = dinero(Monedas.Bolsa(t.cobre, t.plata, t.electro, t.oro, t.platino).totalMc)
         )
         Separador()
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -191,7 +194,7 @@ private fun BloqueMonedas(t: Tesoro, onGuardar: (Tesoro) -> Unit) {
         var texto by remember(m) { mutableStateOf(actual.toString()) }
         FormularioDialog(m.nombre, onDismiss = { editando = null }, onGuardar = {
             onGuardar(con(m, texto.toIntOrNull() ?: actual)); editando = null
-        }) { CampoNumero(texto, { texto = it }, "Cantidad", sufijo = m.abrev) }
+        }) { CampoNumero(texto, { texto = it }, "Cantidad", sufijo = m.abrev, enfocarAlAbrir = true) }
     }
     if (gemas) {
         var texto by remember { mutableStateOf(t.gemas) }
@@ -451,7 +454,7 @@ private fun CatalogoSheet(
                 Column(Modifier.padding(start = 4.dp)) {
                     Text("Comprar (${Monedas.formato(total)})", style = Tipos.ui, color = c.tinta)
                     Text(
-                        "Tienes ${Monedas.formato(disponible)}",
+                        "Tienes ${dinero(disponible)}",
                         style = Tipos.caption,
                         color = if (disponible < total && comprar) c.sangre else c.tintaSuave
                     )

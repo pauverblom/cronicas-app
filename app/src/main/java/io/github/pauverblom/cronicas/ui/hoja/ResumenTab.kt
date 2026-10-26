@@ -139,7 +139,7 @@ fun ResumenTab(ui: HojaUi, vm: HojaViewModel) {
         Fijar.BA -> NumeroDialog(
             "Bonificador de ataque", ui.estado.baOverride,
             h.clase?.let { io.github.pauverblom.cronicas.rules.Progresion.ba(it, h.secundaria, h.nivel) },
-            explicacion = "Se suma FUE en cuerpo a cuerpo y DES a distancia.",
+            explicacion = "Se suma la Fuerza en cuerpo a cuerpo y la Destreza a distancia.",
             onDismiss = { fijar = null }
         ) { v -> vm.actualizarEstado { it.copy(baOverride = v) }; fijar = null }
         Fijar.MOV -> NumeroDialog(
@@ -264,7 +264,7 @@ private fun BloqueSalvaciones(caracts: List<CaracteristicaHoja>) {
     }
     detalle?.let { car ->
         Dialogo(
-            "${car.atributo.nombre} (${car.atributo.abrev})",
+            car.atributo.nombre,
             onDismiss = { detalle = null },
             acciones = { Boton("Cerrar", { detalle = null }, variante = Variante.DISCRETO) }
         ) {
@@ -302,7 +302,7 @@ private fun CaDialog(ui: HojaUi, vm: HojaViewModel, onDismiss: () -> Unit) {
         Column {
             fila(if (ui.hoja.clase?.id == "mistico") "Base (místico)" else "Base", ca.base, false)
             fila(ca.nombreArmadura?.let { "Armadura ($it)" } ?: "Armadura (ninguna)", ca.armadura)
-            fila("DES", ca.des)
+            fila("Destreza", ca.des)
             fila(ca.nombreEscudo?.let { "Escudo ($it)" } ?: "Escudo", ca.escudo)
             if (ca.magia != 0) fila("Objetos mágicos (el mayor)", ca.magia)
             fila("Otros", ca.otros)

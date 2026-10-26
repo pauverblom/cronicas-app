@@ -20,7 +20,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.FileOpen
 import androidx.compose.material.icons.sharp.Settings
-import androidx.compose.material3.DropdownMenu
+import io.github.pauverblom.cronicas.ui.hud.MenuHud
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -194,7 +194,8 @@ private fun FilaPersonaje(r: ResumenPersonaje, onClick: () -> Unit, onExportar: 
     val c = Marca.colores
     val clase = Clases.porId(p.claseId)?.nombre ?: p.claseNombre.ifBlank { null }
     val especie = Especies.porId(p.especieId)?.nombre ?: p.especieNombre
-    val linea = if (clase == null) "Sin clase" else "$clase ${p.nivel}" + if (especie.isNotBlank()) " · $especie" else ""
+    // Igual que en la cabecera de la ficha: «Druida · Semiorco · NV 1»
+    val linea = listOfNotNull(clase ?: "Sin clase", especie.ifBlank { null }, "NV ${p.nivel}").joinToString(" · ")
     Box {
         EntradaLista(
             nombre = p.nombre,
@@ -206,7 +207,7 @@ private fun FilaPersonaje(r: ResumenPersonaje, onClick: () -> Unit, onExportar: 
             onClick = onClick,
             onClickLargo = { menu = true }
         )
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+        MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
             DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onExportar() })
             DropdownMenuItem(text = { Text("Eliminar", style = Tipos.ui, color = c.sangre) }, onClick = { menu = false; onEliminar() })
         }

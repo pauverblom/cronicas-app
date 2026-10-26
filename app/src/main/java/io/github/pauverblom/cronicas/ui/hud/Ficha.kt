@@ -230,7 +230,8 @@ fun OrbePg(
                                     rayado(c.pgNinguno.copy(alpha = 0.7f), Rect(0f, arriba - alto, size.width, arriba), 7.dp.toPx())
                                 }
                             }
-                            sombraInterior(vaso, Color.Black.copy(alpha = if (c.oscuro) 0.6f else 0.12f), 14.dp.toPx())
+                            // Sombra interior del vaso redondo: un solo degradado radial
+                            drawCircle(Brush.radialGradient(0.8f to Color.Transparent, 1f to Color.Black.copy(alpha = if (c.oscuro) 0.6f else 0.12f), center = center, radius = r), r)
                             ornamento(Orn.ORBE, Pintura.Metal.brocha(c))
                         },
                     contentAlignment = Alignment.Center
@@ -321,6 +322,7 @@ fun Insignia(
         modifier
             .widthIn(max = 84.dp)
             .aspectRatio(84f / 108f)
+            .capa(lado = 4.dp, arriba = 4.dp, abajo = 4.dp)
             .then(if (onClick != null) Modifier.foco(interaccion).clickable(interaccion, null, role = Role.Button, onClick = onClick) else Modifier)
             .semantics(mergeDescendants = true) {}
             .drawBehind {
@@ -366,7 +368,6 @@ fun EscudoCaracteristica(
     primaria: Boolean,
     fijado: Boolean,
     modifier: Modifier = Modifier,
-    conNombre: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
     val c = Marca.colores
@@ -385,9 +386,14 @@ fun EscudoCaracteristica(
     ) {
         Gema(ab, 10.dp, Modifier.align(Alignment.TopCenter).offset(y = (-4).dp))
         Column(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(atributo.abrev, style = Tipos.etiquetaCaps, color = ab)
-                if (primaria) IconoGlifo(Glifo.ESTRELLA, tamano = 14.dp, color = c.oro, descripcion = "Primaria")
+            // El nombre entero («CONSTITUCIÓN»), encogido para caber en el escudo
+            Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                TextoAjustado(
+                    atributo.nombre.uppercase(), atributo.abrev,
+                    Tipos.etiquetaCaps.copy(letterSpacing = 0.08.em), ab,
+                    Modifier.weight(1f, fill = false), minimo = 7.5.sp
+                )
+                if (primaria) IconoGlifo(Glifo.ESTRELLA, tamano = 12.dp, color = c.oro, descripcion = "Primaria")
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(conSigno(mod), style = Tipos.cifraLg.copy(fontSize = 32.sp, lineHeight = 38.sp, shadow = brillo(ab, 28f)), color = ab)
@@ -401,7 +407,6 @@ fun EscudoCaracteristica(
                 style = TextStyle(fontFamily = Cinzel, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold),
                 color = c.tinta
             )
-            if (conNombre) Text(atributo.nombre, style = Tipos.caption.copy(fontSize = 11.sp, lineHeight = 14.sp), color = c.tintaSuave, maxLines = 1)
         }
     }
 }
@@ -437,7 +442,7 @@ fun FilaSalvacion(atributo: Atributo, bonus: Int, nd: Int, primaria: Boolean, mo
                 val cx = 22.dp.toPx()
                 val engaste = Path().apply { moveTo(cx, size.height / 2 - e * 0.707f); lineTo(cx + e * 0.707f, size.height / 2); lineTo(cx, size.height / 2 + e * 0.707f); lineTo(cx - e * 0.707f, size.height / 2); close() }
                 drawPath(engaste, c.vitela300)
-                sombraInterior(engaste, Color.Black.copy(alpha = 0.5f), 6.dp.toPx(), 3)
+                sombraInterior(engaste, Color.Black.copy(alpha = 0.5f), 6.dp.toPx())
                 val contorno = FormaFila.contorno(this)
                 drawPath(contorno, cristal(c))
                 texturaGrabada(c, TipoTextura.PLACA, contorno)
@@ -450,11 +455,22 @@ fun FilaSalvacion(atributo: Atributo, bonus: Int, nd: Int, primaria: Boolean, mo
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(Modifier.width(54.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(atributo.abrev, style = Tipos.etiquetaCaps.copy(fontSize = 13.sp), color = ab)
+            // El nombre entero de la característica, encogido si hace falta; la abreviatura solo si no cabe
+            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TextoAjustado(
+                    atributo.nombre.uppercase(), atributo.abrev,
+                    Tipos.etiquetaCaps.copy(fontSize = 13.sp, letterSpacing = 0.1.em), ab,
+                    Modifier.weight(1f, fill = false), minimo = 9.sp
+                )
                 if (primaria) IconoGlifo(Glifo.ESTRELLA, tamano = 12.dp, color = c.oro, descripcion = "Primaria")
             }
-            Text(conSigno(bonus), style = Tipos.cifraMd.copy(shadow = brillo(c.metalBajo, 20f)), color = c.tinta, modifier = Modifier.weight(1f))
+            Text(
+                conSigno(bonus),
+                style = Tipos.cifraMd.copy(fontSize = 19.sp, lineHeight = 24.sp, shadow = brillo(c.metalBajo, 20f)),
+                color = c.tinta,
+                textAlign = TextAlign.End,
+                modifier = Modifier.width(36.dp)
+            )
             val k = 26f / 48f
             Box(
                 Modifier
@@ -696,7 +712,7 @@ fun EspaciosConjuro(clase: String, nivelLanzador: Int, niveles: List<EspacioNive
                     verticalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        if (n.nivel == 0) "TRUCOS" else "NV ${n.nivel}",
+                        if (n.nivel == 0) "TRUCOS" else "NIVEL ${n.nivel}",
                         style = TextStyle(fontFamily = Cinzel, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.14.em),
                         color = color
                     )

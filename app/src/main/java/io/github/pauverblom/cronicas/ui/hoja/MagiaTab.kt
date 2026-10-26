@@ -109,7 +109,7 @@ fun MagiaTab(ui: HojaUi, vm: HojaViewModel) {
             actual = if (nivel in m.forzados) m.espacios[nivel] else null,
             calculado = m.espaciosCalculados[nivel],
             negativos = false,
-            explicacion = "Incluye los conjuros adicionales por ${m.clase.atributoConjuros?.abrev ?: "característica"} alta.",
+            explicacion = "Incluye los conjuros adicionales por ${m.clase.atributoConjuros?.nombre ?: "característica"} alta.",
             onDismiss = { forzar = null }
         ) { v -> vm.forzarEspacios(nivel, v); forzar = null }
     }

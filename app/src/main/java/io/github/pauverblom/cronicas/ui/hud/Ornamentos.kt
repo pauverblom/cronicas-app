@@ -38,6 +38,8 @@ internal class Prim(
     val estilo: Stroke by lazy {
         Stroke(grosor, miter = 4f, join = StrokeJoin.Miter, pathEffect = guiones?.let { PathEffect.dashPathEffect(it) })
     }
+    /** Caja de la figura con su trazo (y el pico de los ingletes), para saltarse las que caen fuera de un trozo. */
+    val limites: Rect by lazy { path.getBounds().inflate(if (trazo) grosor * 2f else 0.5f) }
 }
 
 /** [cortes] son los bordes fijos del 9-slice (arriba, derecha, abajo, izquierda), o null si no se estira. */
@@ -106,8 +108,9 @@ fun rememberFaseFuego(): State<Float> {
     return t.animateFloat(0f, TRAMO * 2f, infiniteRepeatable(tween(2400, easing = LinearEasing)), label = "fase")
 }
 
-private fun DrawScope.figuras(prims: List<Prim>, brocha: Brush, alfa: Float) {
+private fun DrawScope.figuras(prims: List<Prim>, brocha: Brush, alfa: Float, dentro: Rect? = null) {
     for (p in prims) {
+        if (dentro != null && !p.limites.overlaps(dentro)) continue
         if (p.relleno) drawPath(p.path, brocha, alpha = alfa)
         if (p.trazo) drawPath(p.path, brocha, alpha = alfa, style = p.estilo)
     }
@@ -147,7 +150,7 @@ internal fun DrawScope.marco(o: Orn, brocha: Brush, k: Float, destino: Rect = Re
             withTransform({
                 translate(dx - sx * dw / sw, dy - sy * dh / sh)
                 scale(dw / sw, dh / sh, Offset.Zero)
-            }) { figuras(d.prims, brocha, alfa) }
+            }) { figuras(d.prims, brocha, alfa, Rect(sx, sy, sx + sw, sy + sh)) }
         }
     }
     if (t > 0f) {

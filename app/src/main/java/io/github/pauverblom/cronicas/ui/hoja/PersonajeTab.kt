@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.material3.DropdownMenu
+import io.github.pauverblom.cronicas.ui.hud.MenuHud
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import io.github.pauverblom.cronicas.data.Habilidad
 import io.github.pauverblom.cronicas.data.PERSONALIZADA
 import io.github.pauverblom.cronicas.data.Personaje
@@ -88,7 +89,7 @@ fun PersonajeTab(ui: HojaUi, vm: HojaViewModel) {
             anadirXp = false
         }, guardar = "Añadir") {
             Text("Total actual: ${miles(ui.personaje.experiencia)} PX")
-            CampoNumero(texto, { texto = it }, "PX ganados", negativos = true, soporte = "Usa un número negativo para restar")
+            CampoNumero(texto, { texto = it }, "PX ganados", negativos = true, soporte = "Usa un número negativo para restar", enfocarAlAbrir = true)
         }
     }
     habilidad?.let { h -> HabilidadDialog(h, onDismiss = { habilidad = null }, onGuardar = { vm.guardarHabilidad(it); habilidad = null }, onEliminar = { vm.eliminarHabilidad(h); habilidad = null }) }
@@ -119,7 +120,7 @@ private fun BloqueIdentidad(ui: HojaUi, vm: HojaViewModel, onEditar: () -> Unit)
                     Modifier.clickable(onClickLabel = "Cambiar retrato") { menuRetrato = true },
                     claseId = p.claseId, anillo = true
                 )
-                DropdownMenu(expanded = menuRetrato, onDismissRequest = { menuRetrato = false }) {
+                MenuHud(expanded = menuRetrato, onDismissRequest = { menuRetrato = false }) {
                     DropdownMenuItem(text = { Text("Elegir de la galería", style = Tipos.ui, color = c.tinta) }, onClick = { menuRetrato = false; selector(false) })
                     DropdownMenuItem(text = { Text("Hacer una foto", style = Tipos.ui, color = c.tinta) }, onClick = { menuRetrato = false; selector(true) })
                     if (p.fotoPath != null) DropdownMenuItem(text = { Text("Quitar retrato", style = Tipos.ui, color = c.sangre) }, onClick = { menuRetrato = false; vm.quitarRetrato() })
@@ -170,7 +171,7 @@ private fun BloqueCaracteristicas(ui: HojaUi, onClick: (CaracteristicaHoja) -> U
                         fila.forEach { car ->
                             EscudoCaracteristica(
                                 car.atributo, car.puntuacion, car.base, car.mod, car.primaria, car.modForzado,
-                                Modifier.weight(1f), conNombre = porFila == 6, onClick = { onClick(car) }
+                                Modifier.weight(1f), onClick = { onClick(car) }
                             )
                         }
                     }
@@ -180,7 +181,7 @@ private fun BloqueCaracteristicas(ui: HojaUi, onClick: (CaracteristicaHoja) -> U
         val extra = ui.hoja.especie?.mods?.takeIf { it.isNotEmpty() }
         if (extra != null) {
             Text(
-                "Incluye los modificadores de ${ui.hoja.nombreEspecie.lowercase()}: " + extra.entries.joinToString { "${it.key.abrev} ${signo(it.value)}" },
+                "Incluye los modificadores de ${ui.hoja.nombreEspecie.lowercase()}: " + extra.entries.joinToString { "${it.key.nombre} ${signo(it.value)}" },
                 style = Tipos.cuerpoSm,
                 color = c.tintaSuave,
                 modifier = Modifier.padding(top = 12.dp)
@@ -209,10 +210,10 @@ private fun BloqueHabilidades(habilidades: List<Habilidad>, onEditar: (Habilidad
                 var abierta by remember(h.id) { mutableStateOf(false) }
                 Column(Modifier.fillMaxWidth().clickable(onClickLabel = if (abierta) "Plegar" else "Desplegar") { abierta = !abierta }.padding(vertical = 4.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(h.nombre, style = Tipos.ui, color = c.tinta, modifier = Modifier.weight(1f))
+                        Text(h.nombre, style = Tipos.ui, color = c.tinta, modifier = Modifier.weight(1f).padding(end = 8.dp))
                         h.atributo?.let { abrev ->
                             val a = Atributo.fromAbrev(abrev)
-                            Text(abrev, style = Tipos.etiquetaCaps, color = a?.let { colorAtributo(it) } ?: c.tintaSuave)
+                            Text(a?.nombre?.uppercase() ?: abrev, style = Tipos.etiquetaCaps.copy(letterSpacing = 0.08.em), color = a?.let { colorAtributo(it) } ?: c.tintaSuave)
                         }
                         BotonIcono({ onEditar(h) }, "Editar ${h.nombre}") { IconoGlifo(Glifo.LAPIZ, tamano = 16.dp) }
                     }
@@ -366,7 +367,7 @@ private fun SubirNivelDialog(ui: HojaUi, onDismiss: () -> Unit, onConfirmar: (ni
                 CampoNumero(tirada, { tirada = it }, "PG ganados")
             }
             nuevo <= 10 -> {
-                Text("Tira 1d$dado y escribe el resultado. Se te sumará ${signo(modCon)} (tu modificador de CON); si el total queda por debajo de 1, ganas 1 PG.")
+                Text("Tira 1d$dado y escribe el resultado. Se te sumará ${signo(modCon)} (tu modificador de Constitución); si el total queda por debajo de 1, ganas 1 PG.")
                 CampoNumero(
                     tirada, { tirada = it }, "Resultado del d$dado",
                     maxLength = 2,
@@ -405,7 +406,7 @@ private fun HabilidadDialog(h: Habilidad, onDismiss: () -> Unit, onGuardar: (Hab
         Campo(e.nombre, { e = e.copy(nombre = it) }, "Nombre")
         Desplegable(
             "Característica de la tirada", atributos, Atributo.fromAbrev(e.atributo),
-            { it?.let { a -> "${a.abrev} · ${a.nombre}" } ?: "Ninguna" },
+            { it?.nombre ?: "Ninguna" },
             { e = e.copy(atributo = it?.abrev) }
         )
         Campo(e.descripcion, { e = e.copy(descripcion = it) }, "Descripción", unaLinea = false, minLineas = 3)

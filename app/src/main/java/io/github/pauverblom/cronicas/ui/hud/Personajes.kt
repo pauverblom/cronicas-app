@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -75,9 +76,13 @@ import io.github.pauverblom.cronicas.ui.theme.Tipos
 @Composable
 fun Retrato(modelo: Any?, nombre: String, llama: Llama, tamano: Dp, modifier: Modifier = Modifier, anillo: Boolean = false) {
     val c = Marca.colores
-    val fase = if (anillo) rememberFaseFuego().value else 0f
+    val fase = if (anillo) rememberFaseFuego() else null
+    // El aro que arde va en su propia capa (con sitio para el halo): su animación solo repinta el retrato,
+    // no la ventana que lo contiene
+    val conCapa = if (anillo) Modifier.capa(lado = 14.dp, arriba = 14.dp, abajo = 14.dp, siempre = true) else Modifier
     Box(
         modifier
+            .then(conCapa)
             .size(tamano)
             .drawWithContent {
                 drawCircle(Brush.radialGradient(0f to llama.nucleo, 1.2f to c.vitela300, center = Offset(size.width / 2, size.height * 0.4f), radius = size.minDimension * 0.6f))
@@ -85,7 +90,8 @@ fun Retrato(modelo: Any?, nombre: String, llama: Llama, tamano: Dp, modifier: Mo
                 val m = size.width * 0.04f
                 val destino = Rect(Offset(-m, -m), Size(size.width + 2 * m, size.height + 2 * m))
                 if (anillo) halo(Path().apply { addOval(destino) }, llama.brillo.copy(alpha = 0.6f), 10.dp.toPx())
-                ornamento(Orn.ANILLO, (if (anillo) Pintura.Fuego(llama, fase) else Pintura.Metal).brocha(c), destino)
+                // La fase se lee aquí, al pintar: el fuego corre sin recomponer el retrato
+                ornamento(Orn.ANILLO, (if (fase != null) Pintura.Fuego(llama, fase.value) else Pintura.Metal).brocha(c), destino)
             },
         contentAlignment = Alignment.Center
     ) {
@@ -157,10 +163,10 @@ fun EntradaLista(
 fun Modifier.marcoEleccion(elegida: Boolean, llama: Llama?): Modifier {
     val c = Marca.colores
     val anima = animacionesActivas()
-    val fase = if (elegida && llama != null) rememberFaseFuego().value else 0f
+    val fase = if (elegida && llama != null) rememberFaseFuego() else null
     val respiro = if (elegida && llama != null && anima) {
-        rememberInfiniteTransition(label = "respiro").animateFloat(10f, 22f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "halo").value
-    } else 14f
+        rememberInfiniteTransition(label = "respiro").animateFloat(10f, 22f, infiniteRepeatable(tween(1300), RepeatMode.Reverse), label = "halo")
+    } else null
     val elevacion by animateFloatAsState(
         if (elegida) -4f else 0f,
         if (anima) spring(dampingRatio = 0.45f, stiffness = Spring.StiffnessMediumLow) else tween(0),
@@ -169,8 +175,9 @@ fun Modifier.marcoEleccion(elegida: Boolean, llama: Llama?): Modifier {
     return this
         .graphicsLayer { translationY = elevacion * density }
         .drawWithContent {
-            val pintura = if (elegida && llama != null) Pintura.Fuego(llama, fase) else Pintura.Metal
-            if (elegida && llama != null) halo(FormaVentana.contorno(this), llama.brillo.copy(alpha = 0.55f), respiro.dp.toPx())
+            // Fase y respiro se leen al pintar, no al componer
+            val pintura = if (elegida && llama != null) Pintura.Fuego(llama, fase?.value ?: 0f) else Pintura.Metal
+            if (elegida && llama != null) halo(FormaVentana.contorno(this), llama.brillo.copy(alpha = 0.55f), (respiro?.value ?: 14f).dp.toPx())
             interior(c, FormaVentana, cristal(c), TipoTextura.VENTANA, sombra = true)
             val brocha = pintura.brocha(c)
             marco(Orn.PANEL, brocha, density)
@@ -201,7 +208,7 @@ fun VentanaArte(uri: String?, nombre: String, alto: Dp, modifier: Modifier = Mod
             .drawWithContent {
                 drawContent()
                 val contorno = forma.contorno(this)
-                sombraInterior(contorno, c.metalBajo.copy(alpha = 0.5f), 9.dp.toPx(), 4)
+                sombraInterior(contorno, c.metalBajo.copy(alpha = 0.5f), 9.dp.toPx())
                 drawPath(contorno, c.metalBajo, style = Stroke(2.dp.toPx()))
             },
         contentAlignment = Alignment.Center
@@ -258,7 +265,8 @@ fun DatosTarjeta(datos: List<Pair<String, String>>) {
     Column(Modifier.fillMaxWidth().padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         datos.forEach { (k, v) ->
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(k.uppercase(), style = TextStyle(fontFamily = Cinzel, fontSize = 11.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.1.em), color = c.oro, modifier = Modifier.padding(top = 1.dp))
+                // Las etiquetas largas («Característica principal») bajan de línea antes que estrujar el valor
+                Text(k.uppercase(), style = TextStyle(fontFamily = Cinzel, fontSize = 11.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.1.em), color = c.oro, modifier = Modifier.padding(top = 1.dp).widthIn(max = 120.dp))
                 Text(v, style = Tipos.uiSm.copy(fontSize = 13.sp, lineHeight = 18.sp), color = c.tinta, modifier = Modifier.weight(1f))
             }
         }
@@ -274,8 +282,8 @@ fun MechaPasos(paso: Int, total: Int, titulo: String, llama: Llama, modifier: Mo
     val anima = animacionesActivas()
     val avance by animateFloatAsState((paso.toFloat() / total).coerceIn(0f, 1f), tween(if (anima) 600 else 0), label = "mecha")
     val chispa = if (anima) {
-        rememberInfiniteTransition(label = "chispa").animateFloat(0.75f, 1.1f, infiniteRepeatable(tween(350), RepeatMode.Reverse), label = "parpadeo").value
-    } else 1f
+        rememberInfiniteTransition(label = "chispa").animateFloat(0.75f, 1.1f, infiniteRepeatable(tween(350), RepeatMode.Reverse), label = "parpadeo")
+    } else null
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text("Paso $paso de $total: ", style = Tipos.uiSm, color = c.tintaSuave)
@@ -301,6 +309,7 @@ fun MechaPasos(paso: Int, total: Int, titulo: String, llama: Llama, modifier: Mo
             ornamento(Orn.PUNTA, metal, capa)
             scale(-1f, 1f, Offset(size.width / 2, y)) { ornamento(Orn.PUNTA, metal, capa) }
             if (avance < 1f) {
+                val chispa = chispa?.value ?: 1f
                 drawCircle(Brush.radialGradient(listOf(llama.brillo.copy(alpha = 0.7f), Color.Transparent), Offset(punta, y), 16 * d * chispa), 16 * d * chispa, Offset(punta, y))
                 drawCircle(llama.chispa, 6 * d * chispa, Offset(punta, y))
             }

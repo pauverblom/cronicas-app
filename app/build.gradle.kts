@@ -38,6 +38,12 @@ android {
     }
 
     buildTypes {
+        // Las compilaciones de depuración son otra app: se instalan al lado de la de GitHub/Obtainium (firmada con
+        // la clave de publicación y con un versionCode mayor) en vez de chocar con ella
+        debug {
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             if (releaseKeystore != null) {
                 signingConfig = signingConfigs.getByName("release")

@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -66,13 +67,23 @@ fun animarLlama(llama: Llama): Llama {
     return llama.copy(nucleo = nucleo, brillo = brillo, chispa = chispa)
 }
 
-/** Falso si el usuario ha quitado las animaciones del sistema (escala de animación 0): entonces no hay partículas. */
+/**
+ * Falso en lo que no se ve aunque esté compuesto (las pestañas vecinas del pager): ahí las animaciones continuas
+ * se quedan quietas para no pintar fotogramas que nadie mira.
+ */
+val LocalAnimacionesVisibles = staticCompositionLocalOf { true }
+
+/**
+ * Falso si el usuario ha quitado las animaciones del sistema (escala de animación 0): entonces no hay partículas.
+ * También es falso fuera de la pestaña visible ([LocalAnimacionesVisibles]).
+ */
 @Composable
 fun animacionesActivas(): Boolean {
     val context = LocalContext.current
-    return remember {
+    val sistema = remember {
         Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
     }
+    return sistema && LocalAnimacionesVisibles.current
 }
 
 // ── Partículas ──

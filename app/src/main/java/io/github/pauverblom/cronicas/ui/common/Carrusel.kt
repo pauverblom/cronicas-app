@@ -139,7 +139,8 @@ private fun <T> Tarjeta(
                 .foco(interaccion)
                 .clickable(interaccion, null, role = Role.Button) { onElegir(elemento) }
                 .semantics { selected = elegida }
-                .padding(start = 16.dp, end = 16.dp, top = 18.dp, bottom = 34.dp),
+                // A los lados, sitio para el triple marco y los picos: el texto no toca los ornamentos
+                .padding(start = 26.dp, end = 26.dp, top = 18.dp, bottom = 34.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) { contenido(elemento) }
         if (llama != null) Estallido(elegida, llama, Modifier.matchParentSize())

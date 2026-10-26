@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.DropdownMenu
+import io.github.pauverblom.cronicas.ui.hud.MenuHud
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -42,7 +42,8 @@ fun CampoNumero(
     soporte: String? = null,
     maxLength: Int = 8,
     error: String? = null,
-    sufijo: String? = null
+    sufijo: String? = null,
+    enfocarAlAbrir: Boolean = false
 ) {
     Campo(
         valor,
@@ -55,7 +56,8 @@ fun CampoNumero(
         soporte = soporte,
         error = error,
         sufijo = sufijo,
-        teclado = tecladoNumerico(decimales)
+        teclado = tecladoNumerico(decimales),
+        enfocarAlAbrir = enfocarAlAbrir
     )
 }
 
@@ -86,7 +88,7 @@ fun NumeroDialog(
         }
     ) {
         explicacion?.let { Text(it, style = Tipos.cuerpoSm, color = c.tintaSuave) }
-        CampoNumero(texto, { texto = it }, "Valor", negativos = negativos, modifier = Modifier.fillMaxWidth())
+        CampoNumero(texto, { texto = it }, "Valor", negativos = negativos, modifier = Modifier.fillMaxWidth(), enfocarAlAbrir = true)
         if (calculado != null) Text("Calculado: $calculado", style = Tipos.cifraMd, color = c.tintaSuave)
     }
 }
@@ -134,7 +136,7 @@ fun <T> Desplegable(
             onClick = { abierto = true },
             final = { IconoGlifo(Glifo.ROMBO, tamano = 12.dp, color = c.oro) }
         )
-        DropdownMenu(expanded = abierto, onDismissRequest = { abierto = false }, offset = DpOffset(16.dp, 0.dp)) {
+        MenuHud(expanded = abierto, onDismissRequest = { abierto = false }, offset = DpOffset(16.dp, 0.dp)) {
             opciones.forEach { op ->
                 val elegido = op == seleccionado
                 DropdownMenuItem(

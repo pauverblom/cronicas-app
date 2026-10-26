@@ -32,16 +32,23 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -76,23 +83,77 @@ import kotlin.random.Random
 
 // ── Página ──
 
-/** Motas de la noche: posiciones fijas en fracciones, para que no bailen al recomponer. */
-private val Motas: List<Triple<Float, Float, Float>> = Random(11).let { r ->
-    List(90) { Triple(r.nextFloat(), r.nextFloat(), 0.5f + r.nextFloat() * 0.8f) }
+/**
+ * Una mota de la noche. Posición en fracciones de la pantalla; [vx] y [vy] son su deriva en fracciones por
+ * segundo, y [fase] y [ritmo] su parpadeo (radianes y radianes por segundo).
+ */
+private class Mota(val x: Float, val y: Float, val radio: Float, val vx: Float, val vy: Float, val fase: Float, val ritmo: Float, val brillante: Boolean)
+
+/** Siempre las mismas motas, para que no bailen al recomponer. */
+private val Motas: List<Mota> = Random(11).let { r ->
+    List(90) {
+        Mota(
+            x = r.nextFloat(), y = r.nextFloat(),
+            radio = 0.5f + r.nextFloat() * 0.8f,
+            // Todas derivan despacio hacia arriba a la izquierda, cada una a su paso (minutos en cruzar la pantalla)
+            vx = -(0.002f + r.nextFloat() * 0.004f), vy = -(0.001f + r.nextFloat() * 0.003f),
+            fase = r.nextFloat() * 6.28f,
+            ritmo = 0.6f + r.nextFloat() * 1.8f,
+            brillante = r.nextFloat() < 0.12f
+        )
+    }
 }
 
-/** Fondo de toda la app: la noche con dos manchas de bruma y estrellas sueltas (fibras del papel en claro). */
-fun Modifier.fondoNoche(c: Paleta): Modifier = this.drawWithCache {
+/** Fondo de toda la app: la noche con dos manchas de bruma y, si [estrellas], las motas quietas. */
+fun Modifier.fondoNoche(c: Paleta, estrellas: Boolean = true): Modifier = this.drawWithCache {
     val bruma1 = Brush.radialGradient(listOf(c.bruma, Color.Transparent), Offset(size.width * 0.12f, size.height * 0.18f), size.maxDimension * 0.5f)
     val bruma2 = Brush.radialGradient(listOf(c.bruma, Color.Transparent), Offset(size.width * 0.92f, size.height * 0.88f), size.maxDimension * 0.48f)
     onDrawBehind {
         drawRect(c.noche)
         drawRect(bruma1)
         drawRect(bruma2)
-        for ((x, y, r) in Motas) {
-            drawCircle(c.estrella.copy(alpha = 0.55f), r * density, Offset(x * size.width, y * size.height))
+        if (estrellas) motas(c, 0f)
+    }
+}
+
+private fun frac(v: Float) = v - kotlin.math.floor(v)
+
+/** Las motas en el instante [t] (segundos): cada una deriva, da la vuelta por el borde contrario y parpadea. */
+private fun DrawScope.motas(c: Paleta, t: Float) {
+    for (m in Motas) {
+        val centro = Offset(frac(m.x + m.vx * t) * size.width, frac(m.y + m.vy * t) * size.height)
+        val parpadeo = 0.5f + 0.5f * kotlin.math.sin(m.fase + m.ritmo * t)
+        val alfa = if (m.brillante) 0.35f + 0.65f * parpadeo else 0.2f + 0.5f * parpadeo
+        val r = m.radio * density
+        if (m.brillante) drawCircle(c.estrella.copy(alpha = alfa * 0.25f), r * 3.5f, centro)
+        drawCircle(c.estrella.copy(alpha = alfa), r, centro)
+    }
+}
+
+/**
+ * Estrellas que parpadean y derivan despacio. Van en su propia capa, encima de la noche cacheada: el tiempo se
+ * lee solo al pintar (nada se recompone) y se avanza unas 30 veces por segundo. Sin animaciones, quietas.
+ */
+@Composable
+private fun EstrellasVivas(c: Paleta, modifier: Modifier) {
+    val anima = animacionesActivas()
+    val tiempo = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    if (anima) {
+        LaunchedEffect(Unit) {
+            var inicio = -1L
+            var ultimo = 0L
+            while (true) {
+                withFrameNanos { ahora ->
+                    if (inicio < 0) inicio = ahora
+                    if (ahora - ultimo >= 33_000_000L) {
+                        ultimo = ahora
+                        tiempo.floatValue = (ahora - inicio) / 1e9f
+                    }
+                }
+            }
         }
     }
+    Canvas(modifier) { motas(c, tiempo.floatValue) }
 }
 
 // ── Ventana (Panel) ──
@@ -125,16 +186,19 @@ fun Ventana(
     contenido: @Composable ColumnScope.() -> Unit
 ) {
     val c = Marca.colores
-    Box(modifier.fillMaxWidth().padding(top = if (titulo != null) 16.dp else 0.dp)) {
-        Column(
-            Modifier
-                .fillMaxWidth()
-                .marcoVentana(c)
-                .padding(start = 30.dp, end = 30.dp, bottom = 34.dp, top = if (accion != null) 56.dp else if (titulo != null) 38.dp else 32.dp),
-            content = contenido
-        )
-        if (titulo != null) PlacaTitulo(titulo, Modifier.align(Alignment.TopCenter).offset(y = (-15).dp))
-        if (accion != null) Box(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 14.dp)) { accion() }
+    // La capa abarca lo que sobresale: picos a los lados, la clave abajo y la placa del título arriba
+    Box(modifier.fillMaxWidth().padding(top = if (titulo != null) 16.dp else 0.dp).capa(lado = 8.dp, arriba = 16.dp, abajo = 20.dp)) {
+        EnCapa {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .marcoVentana(c)
+                    .padding(start = 30.dp, end = 30.dp, bottom = 34.dp, top = if (accion != null) 56.dp else if (titulo != null) 38.dp else 32.dp),
+                content = contenido
+            )
+            if (titulo != null) PlacaTitulo(titulo, Modifier.align(Alignment.TopCenter).offset(y = (-15).dp))
+            if (accion != null) Box(Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 14.dp)) { accion() }
+        }
     }
 }
 
@@ -147,7 +211,6 @@ fun PlacaTitulo(titulo: String, modifier: Modifier = Modifier) {
         modifier
             .height(30.dp)
             .drawBehind {
-                halo(formaPlaca(s).contorno(this), c.noche.copy(alpha = 0.8f), 8.dp.toPx())
                 interior(c, formaPlaca(s), SolidColor(c.vitela300))
                 marco(Orn.PLACA, Pintura.Metal.brocha(c), s * density)
             }
@@ -177,6 +240,7 @@ fun Placa(
     val interaccion = remember { MutableInteractionSource() }
     Column(
         modifier
+            .capa(lado = 4.dp, arriba = 4.dp, abajo = 4.dp)
             .then(
                 when {
                     onClickLargo != null -> Modifier.foco(interaccion).combinedClickableSinIndicacion(interaccion, onClick ?: {}, onClickLargo)
@@ -188,8 +252,7 @@ fun Placa(
                 interior(c, FormaPlaca, relleno ?: cristal(c), if (textura) TipoTextura.PLACA else null)
                 marco(Orn.CHAFLAN, pintura.brocha(c), 16f / 18f * density)
             },
-        content = contenido
-    )
+    ) { EnCapa { contenido() } }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -255,9 +318,19 @@ fun Dialogo(
     contenido: @Composable ColumnScope.() -> Unit
 ) {
     val c = Marca.colores
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 28.dp), contentAlignment = Alignment.Center) {
-            Box(Modifier.widthIn(max = 420.dp).fillMaxWidth()) {
+    // La ventana del diálogo ocupa la pantalla y se aparta del teclado: el cuerpo se desplaza y los botones
+    // quedan siempre a la vista. Tocar fuera de la tarjeta lo cierra, como en un diálogo normal.
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .clickable(remember { MutableInteractionSource() }, null, onClick = onDismiss)
+                .systemBarsPadding()
+                .imePadding()
+                .padding(horizontal = 16.dp, vertical = 28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Box(Modifier.widthIn(max = 420.dp).fillMaxWidth().pointerInput(Unit) { detectTapGestures { } }) {
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -349,13 +422,13 @@ fun Sigilo(tamano: Dp, modifier: Modifier = Modifier, llama: Llama? = null, gira
     val c = Marca.colores
     val anima = gira && animacionesActivas()
     val angulo = if (anima) {
-        rememberInfiniteTransition(label = "sigilo").animateFloat(0f, 360f, infiniteRepeatable(tween(90_000, easing = LinearEasing)), label = "giro").value
-    } else 0f
+        rememberInfiniteTransition(label = "sigilo").animateFloat(0f, 360f, infiniteRepeatable(tween(90_000, easing = LinearEasing)), label = "giro")
+    } else null
     Canvas(modifier.size(tamano)) {
         llama?.let {
             drawCircle(Brush.radialGradient(listOf(it.brillo.copy(alpha = 0.5f), Color.Transparent), center, size.minDimension * 0.28f), size.minDimension * 0.28f)
         }
-        rotate(angulo) {
+        rotate(angulo?.value ?: 0f) {
             ornamento(Orn.SIGILO, Pintura.Metal.brocha(c), alfa = alfa)
         }
     }
@@ -366,9 +439,8 @@ fun Sigilo(tamano: Dp, modifier: Modifier = Modifier, llama: Llama? = null, gira
 fun LlamaViva(llama: Llama, tamano: Dp = 40.dp, modifier: Modifier = Modifier) {
     val anima = animacionesActivas()
     val t = if (anima) {
-        rememberInfiniteTransition(label = "llama").animateFloat(0f, 1f, infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "t").value
-    } else 0.5f
-    val escala = 0.92f + 0.16f * t
+        rememberInfiniteTransition(label = "llama").animateFloat(0f, 1f, infiniteRepeatable(tween(2400), RepeatMode.Reverse), label = "t")
+    } else null
     Box(
         modifier
             .size(tamano * 1.6f)
@@ -377,7 +449,12 @@ fun LlamaViva(llama: Llama, tamano: Dp = 40.dp, modifier: Modifier = Modifier) {
             },
         contentAlignment = Alignment.Center
     ) {
-        IconoGlifo(Glifo.LLAMA, Modifier.graphicsLayer { scaleX = escala; scaleY = escala; alpha = 0.75f + 0.25f * t }, tamano = tamano, color = llama.brillo)
+        IconoGlifo(Glifo.LLAMA, Modifier.graphicsLayer {
+            // Se lee en la capa: el parpadeo no recompone
+            val v = t?.value ?: 0.5f
+            val escala = 0.92f + 0.16f * v
+            scaleX = escala; scaleY = escala; alpha = 0.75f + 0.25f * v
+        }, tamano = tamano, color = llama.brillo)
     }
 }
 
@@ -419,16 +496,28 @@ fun Cargando(modifier: Modifier = Modifier) {
 @Composable
 fun PestanasHoja(pestanas: List<String>, activa: Int, onElegir: (Int) -> Unit, modifier: Modifier = Modifier) {
     val c = Marca.colores
-    BoxWithConstraints(modifier.fillMaxWidth()) {
+    BoxWithConstraints(modifier.fillMaxWidth().capa()) {
         val minimo = (maxWidth - 16.dp - 4.dp * (pestanas.size - 1)) / pestanas.size
         Row(
             Modifier
                 .fillMaxWidth()
-                .drawBehind {
+                // El raíl va encima de las pestañas: una barra de oro biselada de lado a lado con un filo oscuro
+                // debajo, que separa las pestañas de lo que se desplaza por debajo
+                .drawWithContent {
+                    drawContent()
+                    val alto = 3.dp.toPx()
+                    val filo = 1.5.dp.toPx()
+                    val y = size.height - alto - filo
                     drawRect(
-                        Brush.horizontalGradient(0f to Color.Transparent, 0.12f to c.metalMedio, 0.5f to c.metalAlto, 0.88f to c.metalMedio, 1f to Color.Transparent),
-                        Offset(0f, size.height - 2.dp.toPx()), Size(size.width, 2.dp.toPx())
+                        Brush.verticalGradient(listOf(c.metalAlto, c.metalMedio, c.metalBajo), y, y + alto),
+                        Offset(0f, y), Size(size.width, alto)
                     )
+                    // Brillo en el centro que se apaga hacia los lados
+                    drawRect(
+                        Brush.horizontalGradient(0f to Color.Transparent, 0.5f to c.oroBrillo.copy(alpha = 0.7f), 1f to Color.Transparent),
+                        Offset(0f, y), Size(size.width, alto / 2f)
+                    )
+                    drawRect(c.vitela300, Offset(0f, y + alto), Size(size.width, filo))
                 }
                 .horizontalScroll(rememberScrollState())
                 .padding(start = 8.dp, end = 8.dp, top = 10.dp),
@@ -453,7 +542,7 @@ fun PestanasHoja(pestanas: List<String>, activa: Int, onElegir: (Int) -> Unit, m
                             } else drawPath(contorno, c.vitela300)
                             marco(Orn.PESTANA, (if (sel) Pintura.Metal else Pintura.Hierro).brocha(c), density)
                         }
-                        .padding(horizontal = 12.dp),
+                        .padding(horizontal = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -522,5 +611,35 @@ fun TituloPantalla(titulo: String, subtitulo: String? = null) {
 /** Contenedor que pinta el fondo de la noche y deja el contenido encima. */
 @Composable
 fun Noche(modifier: Modifier = Modifier, contenido: @Composable BoxScope.() -> Unit) {
-    Box(modifier.fillMaxSize().fondoNoche(Marca.colores), content = contenido)
+    val c = Marca.colores
+    Box(modifier.fillMaxSize()) {
+        // La noche en su propia capa: se pinta una vez y no en cada fotograma al desplazar lo de encima
+        Box(Modifier.matchParentSize().graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }.fondoNoche(c, estrellas = false))
+        EstrellasVivas(c, Modifier.matchParentSize().graphicsLayer())
+        contenido()
+    }
+}
+
+// ── Menú (desplegables y pulsación larga) ──
+
+/** Menú desplegable del HUD: el cristal de las ventanas con esquinas cortadas y un filete de oro. */
+@Composable
+fun MenuHud(
+    expanded: Boolean,
+    onDismissRequest: () -> Unit,
+    modifier: Modifier = Modifier,
+    offset: androidx.compose.ui.unit.DpOffset = androidx.compose.ui.unit.DpOffset(0.dp, 0.dp),
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val c = Marca.colores
+    androidx.compose.material3.DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismissRequest,
+        modifier = modifier,
+        offset = offset,
+        shape = androidx.compose.foundation.shape.CutCornerShape(8.dp),
+        containerColor = c.vitela100,
+        border = androidx.compose.foundation.BorderStroke(1.dp, c.dorado),
+        content = content
+    )
 }

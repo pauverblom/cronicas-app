@@ -3,7 +3,11 @@ package io.github.pauverblom.cronicas.ui.hoja
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
@@ -12,11 +16,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.sharp.ArrowBack
 import androidx.compose.material.icons.sharp.MoreVert
-import androidx.compose.material3.DropdownMenu
+import io.github.pauverblom.cronicas.ui.hud.MenuHud
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -33,6 +39,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.pauverblom.cronicas.data.AjustesApp
 import io.github.pauverblom.cronicas.data.Tema
 import io.github.pauverblom.cronicas.ui.common.ConfirmarDialog
+import io.github.pauverblom.cronicas.ui.common.LocalAnimacionesVisibles
 import io.github.pauverblom.cronicas.ui.foto.RetratoAvatar
 import io.github.pauverblom.cronicas.ui.hud.BotonIcono
 import io.github.pauverblom.cronicas.ui.hud.Cabecera
@@ -81,7 +88,7 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) 
             acciones = {
                 Box {
                     BotonIcono({ menu = true }, "Más acciones: exportar o eliminar") { Icon(Icons.Sharp.MoreVert, null, Modifier.size(24.dp)) }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = {
                             menu = false
                             exportLauncher.launch("${ui?.personaje?.nombre ?: "personaje"}.cronicas.json")
@@ -105,7 +112,7 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) 
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        "${ui.hoja.nombreClase} ${ui.hoja.nivel} · ${ui.hoja.nombreEspecie}",
+                        "${ui.hoja.nombreClase} · ${ui.hoja.nombreEspecie} · NV ${ui.hoja.nivel}",
                         style = Tipos.uiSm,
                         color = c.tintaSuave,
                         maxLines = 1,
@@ -123,14 +130,26 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) 
             pager.currentPage.coerceAtMost(pestanas.lastIndex),
             onElegir = { i -> scope.launch { pager.animateScrollToPage(i) } }
         )
-        HorizontalPager(state = pager, modifier = Modifier.weight(1f), beyondViewportPageCount = 1) { page ->
-            when (pestanas[page]) {
-                Pestana.RESUMEN -> ResumenTab(ui, vm)
-                Pestana.PERSONAJE -> PersonajeTab(ui, vm)
-                Pestana.EQUIPO -> EquipoTab(ui, vm)
-                Pestana.MAGIA -> MagiaTab(ui, vm)
-                Pestana.NOTAS -> NotasTab(ui, vm)
+        Box(Modifier.weight(1f)) {
+        HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
+            // Las pestañas vecinas siguen compuestas para deslizar sin esperas, pero con sus animaciones quietas
+            CompositionLocalProvider(LocalAnimacionesVisibles provides (page == pager.settledPage)) {
+                when (pestanas[page]) {
+                    Pestana.RESUMEN -> ResumenTab(ui, vm)
+                    Pestana.PERSONAJE -> PersonajeTab(ui, vm)
+                    Pestana.EQUIPO -> EquipoTab(ui, vm)
+                    Pestana.MAGIA -> MagiaTab(ui, vm)
+                    Pestana.NOTAS -> NotasTab(ui, vm)
+                }
             }
+        }
+            // Sombra bajo el raíl: lo que sube se funde con la noche al pasar por debajo de las pestañas
+            Spacer(
+                Modifier
+                    .fillMaxWidth()
+                    .height(28.dp)
+                    .background(Brush.verticalGradient(0f to c.noche, 0.35f to c.noche.copy(alpha = 0.75f), 1f to c.noche.copy(alpha = 0f)))
+            )
         }
     }
 

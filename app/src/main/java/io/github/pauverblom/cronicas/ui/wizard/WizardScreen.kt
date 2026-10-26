@@ -443,7 +443,7 @@ private fun PasoNombre(s: WizardState, vm: WizardViewModel, llama: Llama) {
 
 /** Datos de una especie para su tarjeta. */
 private fun datosEspecie(e: EspecieDef) = listOf(
-    "Características" to e.mods.entries.joinToString(", ") { "${it.key.abrev} ${signo(it.value)}" }.ifBlank { "sin modificadores" },
+    "Características" to e.mods.entries.joinToString(", ") { "${it.key.nombre} ${signo(it.value)}" }.ifBlank { "sin modificadores" },
     "Tamaño" to if (e.pequeno) "pequeño, 6 m de movimiento" else "mediano, 10 m de movimiento",
     "Primarias" to "la de la clase y ${e.primariasExtra} a elegir",
     "Rasgos" to e.rasgos.joinToString { it.nombre }
@@ -530,7 +530,7 @@ private fun PasoCaracteristicas(s: WizardState, vm: WizardViewModel) {
     val c = Marca.colores
     Instruccion(
         "Tira 3d6 seis veces y asigna los resultados (cada uno entre 3 y 18). Marca ${s.primariasRequeridas} características primarias" +
-            (s.clase?.let { " (${it.principal.abrev} es obligatoria para ${it.nombre.lowercase()})" } ?: "") + "."
+            (s.clase?.let { " (${it.principal.nombre} es obligatoria para ${it.nombre.lowercase()})" } ?: "") + "."
     )
     Atributo.entries.forEach { a ->
         val ajustada = s.ajustada(a)
@@ -546,15 +546,24 @@ private fun PasoCaracteristicas(s: WizardState, vm: WizardViewModel) {
                 error = s.puntuaciones[a]?.toIntOrNull()?.takeIf { it !in 3..18 }?.let { "Entre 3 y 18" }
             )
             Spacer(Modifier.width(12.dp))
-            Row(Modifier.weight(1f).padding(top = 18.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Gema(color, 9.dp)
-                Text(a.abrev, style = Tipos.etiquetaCaps, color = color)
-                if (ajustada != null) {
-                    Text(
-                        (if (modEsp != null) "$ajustada (${signo(modEsp)})" else "$ajustada") + " → ${signo(Modifiers.modifier(ajustada))}",
-                        style = Tipos.ui,
-                        color = color
-                    )
+            // El modificador que da la puntuación y, si la especie la cambia, la cuenta que lleva a ella
+            Column(Modifier.weight(1f).padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                val tirada = s.puntuacion(a)
+                if (ajustada != null && tirada != null) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Gema(color, 9.dp)
+                        Text("Modificador", style = Tipos.uiSm, color = c.tintaSuave)
+                        Text(signo(Modifiers.modifier(ajustada)), style = Tipos.cifraMd, color = color)
+                    }
+                    if (modEsp != null) {
+                        Text(
+                            "$tirada ${signo(modEsp)} por ${s.especie?.nombre?.lowercase().orEmpty()} = $ajustada",
+                            style = Tipos.caption,
+                            color = c.tintaSuave
+                        )
+                    }
+                } else if (modEsp != null) {
+                    Text("${signo(modEsp)} por ${s.especie?.nombre?.lowercase().orEmpty()}", style = Tipos.caption, color = c.tintaSuave)
                 }
             }
             val obligatoria = a == s.clase?.principal
@@ -577,7 +586,7 @@ private fun PasoPg(s: WizardState, vm: WizardViewModel) {
     val c = Marca.colores
     if (dado != null) {
         Instruccion(
-            "Tira 1d$dado y escribe el resultado. Se te sumará ${signo(s.modCon)} (tu modificador de CON); " +
+            "Tira 1d$dado y escribe el resultado. Se te sumará ${signo(s.modCon)} (tu modificador de Constitución); " +
                 "si el total queda por debajo de 1, tendrás 1 PG."
         )
         val tirada = s.pgMax.toIntOrNull()

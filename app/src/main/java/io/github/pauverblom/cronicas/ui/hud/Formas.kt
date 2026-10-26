@@ -1,6 +1,15 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Canvas
@@ -12,7 +21,6 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
-import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.drawscope.CanvasDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -117,22 +125,56 @@ internal fun Shape.contorno(scope: DrawScope): Path {
     }
 }
 
+// ── Caché de pintado ──
+
+/** Verdadero dentro de algo que ya tiene su propia capa: lo de dentro no necesita otra. */
+internal val LocalEnCapa = staticCompositionLocalOf { false }
+
+/**
+ * Pinta el componente en una capa propia fuera de pantalla: la GPU rasteriza marcos, texturas y sombras una vez y,
+ * al desplazar, solo mueve la imagen. Dentro de otra capa no hace nada, para no duplicar memoria.
+ *
+ * Una capa recorta a sus límites, y los ornamentos sobresalen a propósito (picos, clave, placa del título), así
+ * que la capa se agranda [lado], [arriba] y [abajo] sin cambiar lo que ocupa el componente en la disposición.
+ * Con [siempre], la capa se crea también dentro de otra: para lo que se anima dentro de algo quieto.
+ */
+@Composable
+internal fun Modifier.capa(lado: Dp = 0.dp, arriba: Dp = 0.dp, abajo: Dp = 0.dp, siempre: Boolean = false): Modifier {
+    if (LocalEnCapa.current && !siempre) return this
+    return this
+        .layout { medible, limites ->
+            val x = lado.roundToPx()
+            val y0 = arriba.roundToPx()
+            val y1 = abajo.roundToPx()
+            val p = medible.measure(limites.offset(2 * x, y0 + y1))
+            layout(p.width - 2 * x, p.height - y0 - y1) { p.place(-x, -y0) }
+        }
+        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+        .padding(start = lado, end = lado, top = arriba, bottom = abajo)
+}
+
+/** Contenido que vive dentro de una capa (ver [capa]). */
+@Composable
+internal fun EnCapa(contenido: @Composable () -> Unit) = CompositionLocalProvider(LocalEnCapa provides true, content = contenido)
+
 // ── Profundidad y brillos ──
 
 /**
- * Sombra interior aproximada (shadow-inset): franjas del contorno cada vez más anchas y tenues, recortadas
- * dentro de la forma. Funciona igual en todas las versiones de Android, sin filtros de desenfoque.
+ * Sombra interior aproximada (shadow-inset): cuatro degradados, uno desde cada borde hacia dentro, que rellenan la
+ * misma forma. Sin recortes ni trazos gruesos, que son lo que más cuesta pintar en cada fotograma al desplazarse.
  */
-internal fun DrawScope.sombraInterior(contorno: Path, color: Color, radio: Float, pasos: Int = 6) {
-    clipPath(contorno) {
-        for (i in pasos downTo 1) {
-            drawPath(contorno, color.copy(alpha = color.alpha / pasos), style = Stroke(2f * radio * i / pasos))
-        }
-    }
+internal fun DrawScope.sombraInterior(contorno: Path, color: Color, radio: Float) {
+    val b = contorno.getBounds()
+    val r = radio.coerceAtMost(minOf(b.width, b.height) / 2f)
+    val nada = color.copy(alpha = 0f)
+    drawPath(contorno, Brush.verticalGradient(listOf(color, nada), b.top, b.top + r))
+    drawPath(contorno, Brush.verticalGradient(listOf(nada, color), b.bottom - r, b.bottom))
+    drawPath(contorno, Brush.horizontalGradient(listOf(color, nada), b.left, b.left + r))
+    drawPath(contorno, Brush.horizontalGradient(listOf(nada, color), b.right - r, b.right))
 }
 
-/** Halo exterior (drop-shadow de brillo) alrededor de un contorno. */
-internal fun DrawScope.halo(contorno: Path, color: Color, radio: Float, pasos: Int = 6) {
+/** Halo exterior (drop-shadow de brillo) alrededor de un contorno: tres trazos cada vez más anchos y tenues. */
+internal fun DrawScope.halo(contorno: Path, color: Color, radio: Float, pasos: Int = 3) {
     for (i in pasos downTo 1) {
         drawPath(contorno, color.copy(alpha = color.alpha * 0.9f / pasos), style = Stroke(2f * radio * i / pasos))
     }
@@ -178,10 +220,10 @@ private fun teselas(c: Paleta, densidad: Float): Teselas = synchronized(cacheTes
             ShaderBrush(ImageShader(img, TileMode.Repeated, TileMode.Repeated))
         }
         val azar = Random(7)
+        // Grano oscuro con alfa al azar: se mezcla normal, sin el modo Overlay que obliga a releer la pantalla
         val grano = bitmap(96, 1f) {
             for (y in 0 until 96) for (x in 0 until 96) {
-                val v = azar.nextFloat()
-                drawRect(Color(v, v, v), Offset(x.toFloat(), y.toFloat()), Size(1f, 1f))
+                drawRect(Color(0f, 0f, 0f, azar.nextFloat()), Offset(x.toFloat(), y.toFloat()), Size(1f, 1f))
             }
         }
         Teselas(runas, ShaderBrush(ImageShader(grano, TileMode.Repeated, TileMode.Repeated)))
@@ -193,7 +235,7 @@ internal fun DrawScope.texturaGrabada(c: Paleta, tipo: TipoTextura, contorno: Pa
     val t = teselas(c, density)
     clipPath(contorno) {
         drawRect(t.runas.getValue(tipo), alpha = Textura.RUNAS)
-        drawRect(t.grano, alpha = Textura.GRANO, blendMode = BlendMode.Overlay)
+        drawRect(t.grano, alpha = Textura.GRANO * 2f)
         if (tipo == TipoTextura.VENTANA) {
             withTransform({ scale(size.width, size.height, Offset.Zero) }) {
                 drawRect(
@@ -220,7 +262,7 @@ internal fun DrawScope.interior(
     val contorno = forma.contorno(this)
     relleno?.let { drawPath(contorno, it) }
     textura?.let { texturaGrabada(c, it, contorno) }
-    if (sombra) sombraInterior(contorno, Color.Black.copy(alpha = if (c.oscuro) 0.55f else 0.1f), 14.dp.toPx())
+    if (sombra) sombraInterior(contorno, Color.Black.copy(alpha = if (c.oscuro) 0.45f else 0.08f), 18.dp.toPx())
     return contorno
 }
 

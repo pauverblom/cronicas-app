@@ -80,8 +80,8 @@ object Carga {
 
     fun efectos(banda: Banda): String? = when (banda) {
         Banda.LIGERA -> null
-        Banda.MEDIA -> "-2 a las tiradas de DES, -3 m de movimiento"
-        Banda.SOBRECARGADO -> "Movimiento 3 m, fallo automático en DES, sin DES a la CA"
+        Banda.MEDIA -> "-2 a las tiradas de Destreza, -3 m de movimiento"
+        Banda.SOBRECARGADO -> "Movimiento 3 m, fallo automático en Destreza, sin Destreza a la CA"
     }
 }
 

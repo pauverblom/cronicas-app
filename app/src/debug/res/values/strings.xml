@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Para distinguirla en el móvil de la app instalada desde GitHub -->
+    <string name="app_name">Crónicas (debug)</string>
+</resources>
