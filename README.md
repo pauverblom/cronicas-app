@@ -104,6 +104,33 @@ If a release fails at *Verify signing key*, its log prints the decoded keystore'
 
 Pull requests and pushes to `main` run `.github/workflows/ci.yml`, which runs the rules unit tests and builds the debug APK.
 
+## Web version (iPhone, desktop)
+
+The same app runs in the browser at **https://pauverblom.github.io/cronicas-app/**, built with Compose
+Multiplatform for Kotlin/Wasm. It needs a recent browser (Safari 18.2+ on iOS, Chrome/Edge 119+, Firefox 120+).
+On an iPhone, open it in Safari and use *Share → Add to Home Screen* to get it as an app.
+
+It shares the code of the Android app: the `web/` module compiles the rules, the data model and every screen straight
+from `app/src/main/java` (the list is in `web/build.gradle.kts`). Only the Android-specific pieces have web
+replacements in `web/src/wasmJsMain`, with the same names and API: storage (`data/Almacen.kt` and
+`data/Repository.kt` keep each character as its export snapshot in the browser's `localStorage`), files, portraits,
+fonts and Firebase (`resources/nube.js`, using the Firebase JS SDK on the same Firestore documents). So a web
+character can be exported to an Android device and vice versa, and sync works between Android and the web.
+
+Differences from Android:
+
+- Characters live in that browser's storage. Clearing site data deletes them, so sync or export the ones you care about.
+- Portraits are center-cropped automatically (there is no crop screen); camera and gallery are the browser's image picker.
+- The browser's back button doesn't move between screens; use the app's own back arrows.
+
+```bash
+./gradlew :web:wasmJsBrowserDevelopmentRun    # dev server with the app
+./gradlew :web:wasmJsBrowserDistribution      # static site in web/build/dist/wasmJs/productionExecutable/
+```
+
+The `Web` workflow (`.github/workflows/web.yml`) publishes the site to GitHub Pages on every push to `main`.
+Setup, once: *Settings → Pages → Build and deployment → Source: **GitHub Actions***.
+
 ## Character sync
 
 Each synced character is one Firestore document, `personajes/{code}`, holding the same snapshot as the export
@@ -130,6 +157,15 @@ Deleting a synced character only removes it from that device; the cloud copy and
    ```bash
    gh secret set GOOGLE_SERVICES_JSON -R pauverblom/cronicas-app < google-services.json
    ```
+
+6. For the web version: *Project settings → General → Your apps → Add app → Web* (no hosting needed), copy the
+   `firebaseConfig` object it shows, and store it as a secret too (JSON or the JS snippet both work):
+
+   ```bash
+   gh secret set FIREBASE_WEB_CONFIG -R pauverblom/cronicas-app    # paste it, then Ctrl-D
+   ```
+
+   Then add `pauverblom.github.io` under *Authentication → Settings → Authorized domains*.
 
 The release workflow writes the secret to `app/src/release/google-services.json`. Builds without it (debug builds,
 pull requests, forks) compile normally and simply don't show the sync options. To try sync in a local debug build,
@@ -172,6 +208,8 @@ with the file name it expects (e.g. `objeto_estoque.webp`); drop a `.webp` with 
 ```bash
 python3 scripts/extract_ilustraciones.py LORE/Cronicasdelamarca.pdf LORE/caja_roja.pdf app/src/main/assets/ilustraciones
 ```
+
+`web/` is the browser build of the same code (see [Web version](#web-version-iphone-desktop)).
 
 Rules tests live in `app/src/test` (`./gradlew testDebugUnitTest`).
 

@@ -1,6 +1,6 @@
 name: CI
 
-# Make sure every pull request and push to main still compiles and the rules tests pass.
+# Make sure every pull request and push to main still compiles (Android and web) and the rules tests pass.
 on:
   pull_request:
   push:
@@ -19,4 +19,4 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - run: ./gradlew testDebugUnitTest assembleDebug
+      - run: ./gradlew testDebugUnitTest assembleDebug :web:compileKotlinWasmJs

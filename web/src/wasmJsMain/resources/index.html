@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Crónicas de la Marca</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Crónicas">
+    <meta name="theme-color" content="#120c08">
+    <link rel="manifest" href="manifest.webmanifest">
+    <style>
+        html, body { margin: 0; height: 100%; background: #120c08; overflow: hidden; overscroll-behavior: none; }
+        #carga { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+                 color: #c9a45c; font: 18px Georgia, serif; letter-spacing: .08em; }
+    </style>
+    <!-- Configuración de Firebase (la escribe la publicación desde un secreto; sin ella, la app funciona sin nube) -->
+    <script src="firebase-config.js" onerror="window.FIREBASE_CONFIG = null"></script>
+    <script src="ayudas.js"></script>
+    <script type="module" src="nube.js"></script>
+    <script src="cronicas.js"></script>
+</head>
+<body>
+<div id="carga">Cargando la Marca…</div>
+</body>
+</html>

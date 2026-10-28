@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import io.github.pauverblom.cronicas.ui.plataforma.anchoVentanaDp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
@@ -88,7 +89,7 @@ fun ColumnasHoja(izquierda: @Composable ColumnScope.() -> Unit, derecha: @Compos
 
 /** Ancho a partir del cual la ficha va a dos columnas. */
 @Composable
-private fun esAncha(): Boolean = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 700
+private fun esAncha(): Boolean = anchoVentanaDp() >= 700
 
 private enum class Fijar { BA, MOV, PG_MAX }
 

@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.common
 
+import kotlin.math.pow
 import io.github.pauverblom.cronicas.ui.plataforma.animacionesDelSistema
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -106,7 +107,7 @@ private class Particula(
 
     fun avanzar(dt: Float) {
         vida += dt
-        val f = Math.pow(frenado.toDouble(), dt.toDouble()).toFloat()
+        val f = frenado.toDouble().pow(dt.toDouble()).toFloat()
         vx *= f
         vy = vy * f + empuje * dt
         x += (vx + sin(fase + vida * 2.3f) * vaiven) * dt

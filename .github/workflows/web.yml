@@ -1,0 +1,65 @@
+name: Web
+
+# Builds the web version (Kotlin/Wasm) and publishes it on GitHub Pages:
+# https://pauverblom.github.io/cronicas-app/
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v5
+
+      - run: ./gradlew :web:wasmJsBrowserDistribution
+
+      # Firebase web config (the firebaseConfig object from the Firebase console, as JSON or as the JS snippet).
+      # Without it the web app works the same, just without character sync.
+      - name: Add Firebase config
+        env:
+          FIREBASE_WEB_CONFIG: ${{ secrets.FIREBASE_WEB_CONFIG }}
+        run: |
+          OUT=web/build/dist/wasmJs/productionExecutable/firebase-config.js
+          if [ -z "$FIREBASE_WEB_CONFIG" ]; then
+            echo "::warning::Repository secret FIREBASE_WEB_CONFIG is not set: the web app has no character sync"
+            exit 0
+          fi
+          node -e '
+            let t = process.env.FIREBASE_WEB_CONFIG.trim();
+            t = t.slice(t.indexOf("{"), t.lastIndexOf("}") + 1);
+            const cfg = Function("return (" + t + ")")();
+            if (!cfg || !cfg.apiKey || !cfg.projectId || !cfg.appId) throw new Error("missing apiKey, projectId or appId");
+            require("fs").writeFileSync(process.argv[1], "window.FIREBASE_CONFIG = " + JSON.stringify(cfg) + ";\n");
+          ' "$OUT" || { echo "::error::FIREBASE_WEB_CONFIG is not a valid Firebase web config"; exit 1; }
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/build/dist/wasmJs/productionExecutable
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

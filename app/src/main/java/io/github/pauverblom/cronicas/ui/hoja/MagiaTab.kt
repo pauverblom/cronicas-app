@@ -154,7 +154,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.listaPreparados(ui: H
         item(key = "vacio") { Vacio("No hay conjuros preparados. Prepáralos desde «Conocidos».") }
         return
     }
-    preparados.groupBy { it.cp.nivel }.toSortedMap().forEach { (nivel, lista) ->
+    preparados.groupBy { it.cp.nivel }.toList().sortedBy { it.first }.forEach { (nivel, lista) ->
         item(key = "p$nivel") {
             Ventana(tituloNivel(nivel), Modifier.padding(top = 14.dp)) {
                 lista.forEach { d ->
@@ -195,7 +195,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.listaGrimorio(ui: Hoj
         item(key = "vacio") { Vacio("Aún no conoces conjuros. Añádelos desde el «Catálogo».") }
         return
     }
-    ui.conjuros.groupBy { it.cp.nivel }.toSortedMap().forEach { (nivel, lista) ->
+    ui.conjuros.groupBy { it.cp.nivel }.toList().sortedBy { it.first }.forEach { (nivel, lista) ->
         item(key = "g$nivel") {
             var olvidar by remember { mutableStateOf<ConjuroConDetalle?>(null) }
             Ventana(tituloNivel(nivel), Modifier.padding(top = 14.dp)) {

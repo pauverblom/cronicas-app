@@ -13,6 +13,7 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
@@ -105,6 +106,10 @@ fun esquemaDinamico(oscuro: Boolean): ColorScheme? {
     val context = LocalContext.current
     return remember(oscuro) { if (oscuro) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context) }
 }
+
+/** Ancho de la ventana en dp (para elegir entre una y dos columnas). */
+@Composable
+fun anchoVentanaDp(): Int = LocalConfiguration.current.screenWidthDp
 
 /** Ventana de los diálogos: ocupa la pantalla para poder apartarse del teclado. */
 fun propiedadesDialogo() = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
