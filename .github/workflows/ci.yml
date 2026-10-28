@@ -19,4 +19,4 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v5
 
-      - run: ./gradlew testDebugUnitTest assembleDebug :web:compileKotlinWasmJs
+      - run: ./gradlew testDebugUnitTest assembleDebug :web:wasmJsBrowserDevelopmentExecutableDistribution
