@@ -22,5 +22,8 @@ local.properties
 *.keystore
 *.jks
 
+# Firebase config (lives in a repository secret)
+google-services.json
+
 # Logs
 *.log

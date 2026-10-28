@@ -19,6 +19,9 @@ table; the app keeps the sheet and fills in everything the rules derive.
   coins); containers with capacity; mounts and companions that carry load; load bands and their penalties.
 - **Magia:** spell slots from the class tables plus bonus spells; known and prepared spells with "used" checkboxes and
   a rest button; catalog of the 371 rulebook spells for Clérigo, Druida, Ilusionista and Mago, CSV import and custom spells.
+- **Sync between devices:** a character can be synced through Firebase (long-press its card → *Sincronizar*). The
+  app shows a code; enter it on another device with *Vincular personaje* and both keep the same sheet, live, last
+  change wins. Works offline and catches up when back online. See [Character sync](#character-sync).
 - **Themes:** Pergamino oscuro, Pergamino claro, Material You, or *Desde retrato* (each sheet takes its colors from the
   character's portrait), with system, light or dark mode.
 
@@ -99,6 +102,38 @@ If a release fails at *Verify signing key*, its log prints the decoded keystore'
 
 Pull requests and pushes to `main` run `.github/workflows/ci.yml`, which runs the rules unit tests and builds the debug APK.
 
+## Character sync
+
+Each synced character is one Firestore document, `personajes/{code}`, holding the same snapshot as the export
+(`Backup.PersonajeExportado`) as a JSON string. The portrait is a separate document,
+`personajes/{code}/retrato/actual`, uploaded only when it changes. Devices sign in anonymously; the 12-character
+random code is the only key, so anyone with the code can read and edit that character.
+
+`data/sync/Sincronizador.kt` uploads a character whenever its tables change (debounced) and applies remote changes
+by rewriting the local sheet in place (`Backup.escribir`). To avoid echoes, both directions compare a normalized
+form of the sheet (`data/sync/Canonica.kt`) that ignores local database ids. Which characters are linked is stored
+in `SharedPreferences`, so the database schema is unchanged.
+
+Deleting a synced character only removes it from that device; the cloud copy and other devices keep it.
+
+### Setting up Firebase (once)
+
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com) (the free Spark plan is enough).
+2. *Add app → Android*, package name `io.github.pauverblom.cronicas`. Download `google-services.json`.
+3. *Build → Authentication → Get started → Sign-in method*: enable **Anonymous**.
+4. *Build → Firestore Database → Create database* (production mode, any location), then *Rules*: paste
+   [`firestore.rules`](firestore.rules) and *Publish*.
+5. Store the config as a repository secret (it is not committed):
+
+   ```bash
+   gh secret set GOOGLE_SERVICES_JSON -R pauverblom/cronicas-app < google-services.json
+   ```
+
+The release workflow writes the secret to `app/src/release/google-services.json`. Builds without it (debug builds,
+pull requests, forks) compile normally and simply don't show the sync options. To try sync in a local debug build,
+also register the app `io.github.pauverblom.cronicas.debug` in Firebase and put its `google-services.json` in
+`app/src/debug/`.
+
 ## Project layout
 
 ```
@@ -106,6 +141,7 @@ app/src/main/java/io/github/pauverblom/cronicas/
 ├── CronicasApp.kt          Application: DB, repository and settings; seeds the spell catalog on first launch
 ├── MainActivity.kt
 ├── data/                   Room entities and DAOs, repository, settings (DataStore), export/import (Backup.kt)
+│   └── sync/               Firebase sync of characters between devices
 ├── rules/                  Rules engine: Hoja.kt computes the whole derived sheet; Reglas.kt has progression,
 │   │                       saves, load, spell slots and coins
 │   └── data/               Rulebook data: classes, species, alignments, item catalog

@@ -4,6 +4,13 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.google.services)
+}
+
+// La sincronización usa Firebase. Su configuración (google-services.json) no está en el repositorio: la publicación
+// la pone en src/release/ desde un secreto. Sin ella la app compila igual y la sincronización no aparece.
+googleServices {
+    missingGoogleServicesStrategy = com.google.gms.googleservices.GoogleServicesPlugin.MissingGoogleServicesStrategy.WARN
 }
 
 // Release signing comes from environment variables (set by the release workflow from repo secrets).
@@ -65,6 +72,9 @@ android {
     buildFeatures {
         compose = true
     }
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
 }
 
 ksp {
@@ -94,7 +104,14 @@ dependencies {
     implementation(libs.androidx.palette)
     implementation(libs.material.kolor)
     implementation(libs.image.cropper)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
+    implementation(libs.kotlinx.coroutines.play.services)
 
     testImplementation(libs.junit)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
     debugImplementation(libs.androidx.compose.ui.tooling)
 }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.sharp.FileOpen
 import androidx.compose.material.icons.sharp.Settings
+import androidx.compose.material.icons.sharp.Sync
 import io.github.pauverblom.cronicas.ui.hud.MenuHud
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -32,7 +33,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -41,15 +45,19 @@ import io.github.pauverblom.cronicas.CronicasApp
 import io.github.pauverblom.cronicas.data.Backup
 import io.github.pauverblom.cronicas.data.Personaje
 import io.github.pauverblom.cronicas.data.ResumenPersonaje
+import io.github.pauverblom.cronicas.data.sync.Sincronizador
 import io.github.pauverblom.cronicas.rules.data.Clases
 import io.github.pauverblom.cronicas.rules.data.Especies
 import io.github.pauverblom.cronicas.ui.common.ConfirmarDialog
+import io.github.pauverblom.cronicas.ui.common.FormularioDialog
 import io.github.pauverblom.cronicas.ui.common.llamaDe
 import io.github.pauverblom.cronicas.ui.foto.Retratos
 import io.github.pauverblom.cronicas.ui.hud.Boton
 import io.github.pauverblom.cronicas.ui.hud.BotonIcono
 import io.github.pauverblom.cronicas.ui.hud.Cabecera
+import io.github.pauverblom.cronicas.ui.hud.Campo
 import io.github.pauverblom.cronicas.ui.hud.Cargando
+import io.github.pauverblom.cronicas.ui.hud.Dialogo
 import io.github.pauverblom.cronicas.ui.hud.EntradaLista
 import io.github.pauverblom.cronicas.ui.hud.EstadoVacio
 import io.github.pauverblom.cronicas.ui.hud.Glifo
@@ -67,6 +75,10 @@ import java.io.File
 
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as CronicasApp).repository
+    private val sync = (app as CronicasApp).sincronizador
+
+    val syncDisponible = sync.disponible
+    val vinculos = sync.vinculos
 
     val personajes = repo.resumenes().map<List<ResumenPersonaje>, List<ResumenPersonaje>?> { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
@@ -82,6 +94,17 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
         }.isSuccess
         onFin(ok)
     }
+
+    fun activarSync(pid: Long, onFin: (String?) -> Unit) = viewModelScope.launch {
+        onFin(runCatching { sync.activar(pid) }.getOrNull())
+    }
+
+    /** Devuelve el id del personaje vinculado, o el mensaje de error. */
+    fun vincular(codigo: String, onFin: (Result<Long>) -> Unit) = viewModelScope.launch {
+        onFin(runCatching { sync.vincular(codigo) })
+    }
+
+    fun desvincular(pid: Long) = sync.desvincular(pid)
 
     fun importar(uri: Uri, onFin: (Long?) -> Unit) = viewModelScope.launch {
         val app = getApplication<Application>()
@@ -103,9 +126,12 @@ fun HomeScreen(
     vm: HomeViewModel = viewModel()
 ) {
     val personajes by vm.personajes.collectAsState()
+    val vinculos by vm.vinculos.collectAsState()
     val context = LocalContext.current
     var exportando by remember { mutableStateOf<Personaje?>(null) }
     var borrando by remember { mutableStateOf<Personaje?>(null) }
+    var sincronizando by remember { mutableStateOf<Personaje?>(null) }
+    var vinculando by remember { mutableStateOf(false) }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val p = exportando ?: return@rememberLauncherForActivityResult
@@ -124,6 +150,9 @@ fun HomeScreen(
     Column(Modifier.fillMaxSize()) {
         Cabecera(
             acciones = {
+                if (vm.syncDisponible) {
+                    BotonIcono({ vinculando = true }, "Vincular personaje") { Icon(Icons.Sharp.Sync, null, Modifier.size(24.dp)) }
+                }
                 BotonIcono(importar, "Importar personaje") { Icon(Icons.Sharp.FileOpen, null, Modifier.size(24.dp)) }
                 BotonIcono(onAjustes, "Ajustes") { Icon(Icons.Sharp.Settings, null, Modifier.size(24.dp)) }
             }
@@ -131,7 +160,7 @@ fun HomeScreen(
         val lista = personajes
         when {
             lista == null -> Cargando()
-            lista.isEmpty() -> SinPersonajes(onNuevo, importar)
+            lista.isEmpty() -> SinPersonajes(onNuevo, importar, if (vm.syncDisponible) ({ vinculando = true }) else null)
             else -> {
                 Boton(
                     "Nuevo personaje", onNuevo,
@@ -153,7 +182,8 @@ fun HomeScreen(
                                 exportando = r.personaje
                                 exportLauncher.launch("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
                             },
-                            onEliminar = { borrando = r.personaje }
+                            onEliminar = { borrando = r.personaje },
+                            onSincronizar = if (vm.syncDisponible) ({ sincronizando = r.personaje }) else null
                         )
                     }
                     item { Box(Modifier.navigationBarsPadding()) }
@@ -165,15 +195,142 @@ fun HomeScreen(
     borrando?.let { p ->
         ConfirmarDialog(
             titulo = "Eliminar personaje",
-            texto = "¿Eliminar a ${p.nombre}? Se borrará toda su ficha. Esta acción no se puede deshacer.",
+            texto = if (p.id in vinculos) {
+                "¿Eliminar a ${p.nombre} de este dispositivo? Se borrará su ficha aquí y dejará de sincronizarse. " +
+                    "En los demás dispositivos vinculados seguirá estando."
+            } else {
+                "¿Eliminar a ${p.nombre}? Se borrará toda su ficha. Esta acción no se puede deshacer."
+            },
             onDismiss = { borrando = null },
             onConfirm = { vm.eliminar(p) }
+        )
+    }
+
+    sincronizando?.let { p ->
+        SincronizarDialog(
+            personaje = p,
+            codigo = vinculos[p.id],
+            onActivar = { onFin ->
+                vm.activarSync(p.id) { codigo ->
+                    onFin()
+                    if (codigo == null) {
+                        Toast.makeText(context, "No se pudo activar. ¿Hay conexión a internet?", Toast.LENGTH_LONG).show()
+                    }
+                }
+            },
+            onDesvincular = { vm.desvincular(p.id) },
+            onDismiss = { sincronizando = null }
+        )
+    }
+
+    if (vinculando) {
+        VincularDialog(
+            onVincular = { codigo, onError ->
+                vm.vincular(codigo) { r ->
+                    r.onSuccess { id ->
+                        vinculando = false
+                        onAbrir(id)
+                    }.onFailure { e ->
+                        onError(
+                            when (e) {
+                                is IllegalArgumentException, is IllegalStateException -> e.message ?: "No se pudo vincular"
+                                else -> "No se pudo vincular. ¿Hay conexión a internet?"
+                            }
+                        )
+                    }
+                }
+            },
+            onDismiss = { vinculando = false }
+        )
+    }
+}
+
+/** Activa la sincronización de un personaje o muestra su código para vincularlo en otro dispositivo. */
+@Composable
+private fun SincronizarDialog(
+    personaje: Personaje,
+    codigo: String?,
+    onActivar: (onFin: () -> Unit) -> Unit,
+    onDesvincular: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    var activando by remember { mutableStateOf(false) }
+    val portapapeles = LocalClipboardManager.current
+    val context = LocalContext.current
+    val c = Marca.colores
+    if (codigo == null) {
+        Dialogo(
+            "Sincronizar",
+            onDismiss = onDismiss,
+            acciones = {
+                Boton("Cancelar", onDismiss, variante = Variante.DISCRETO)
+                Boton(if (activando) "Activando…" else "Activar", {
+                    activando = true
+                    onActivar { activando = false }
+                }, variante = Variante.DORADO, activo = !activando)
+            }
+        ) {
+            Text("Sincroniza la ficha de ${personaje.nombre} con tus otros dispositivos: lo que cambies en uno aparecerá en los demás.")
+            Text("Al activarla tendrás un código para vincular el personaje en el otro dispositivo.", style = Tipos.uiSm, color = c.tintaSuave)
+        }
+    } else {
+        val visible = Sincronizador.formatear(codigo)
+        Dialogo(
+            "Sincronizado",
+            onDismiss = onDismiss,
+            extra = {
+                Boton("Dejar de sincronizar", { onDesvincular(); onDismiss() }, variante = Variante.PELIGRO_DISCRETO)
+            },
+            acciones = {
+                Boton("Copiar", {
+                    portapapeles.setText(AnnotatedString(visible))
+                    Toast.makeText(context, "Código copiado", Toast.LENGTH_SHORT).show()
+                })
+                Boton("Cerrar", onDismiss, variante = Variante.DORADO)
+            }
+        ) {
+            Text("Para tener a ${personaje.nombre} en otro dispositivo, pulsa allí «Vincular personaje» y escribe este código:")
+            Text(visible, style = Tipos.tituloLg, color = c.oro, textAlign = TextAlign.Center, modifier = Modifier.padding(vertical = 8.dp).align(Alignment.CenterHorizontally))
+            Text("Comparte el código solo con quien quieras que pueda ver y cambiar la ficha.", style = Tipos.uiSm, color = c.tintaSuave)
+        }
+    }
+}
+
+/** Pide un código de sincronización y descarga ese personaje. */
+@Composable
+private fun VincularDialog(onVincular: (codigo: String, onError: (String) -> Unit) -> Unit, onDismiss: () -> Unit) {
+    var codigo by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+    var vinculando by remember { mutableStateOf(false) }
+    val completo = Sincronizador.normalizar(codigo).length == Sincronizador.LARGO_CODIGO
+    FormularioDialog(
+        titulo = "Vincular personaje",
+        onDismiss = onDismiss,
+        guardar = if (vinculando) "Vinculando…" else "Vincular",
+        guardarActivo = completo && !vinculando,
+        onGuardar = {
+            vinculando = true
+            error = null
+            onVincular(codigo) { mensaje ->
+                vinculando = false
+                error = mensaje
+            }
+        }
+    ) {
+        Text("Escribe el código que aparece en el otro dispositivo, en «Sincronizar» del personaje.")
+        Campo(
+            codigo,
+            { codigo = it; error = null },
+            "Código",
+            marcador = "XXXX-XXXX-XXXX",
+            error = error,
+            enfocarAlAbrir = true
         )
     }
 }
 
 @Composable
-private fun SinPersonajes(onNuevo: () -> Unit, onImportar: () -> Unit) {
+private fun SinPersonajes(onNuevo: () -> Unit, onImportar: () -> Unit, onVincular: (() -> Unit)?) {
     Box(Modifier.fillMaxSize().navigationBarsPadding(), contentAlignment = Alignment.Center) {
         EstadoVacio(
             "Bienvenido a la Marca del Este",
@@ -182,13 +339,20 @@ private fun SinPersonajes(onNuevo: () -> Unit, onImportar: () -> Unit) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Boton("Crear personaje", onNuevo, variante = Variante.DORADO)
                 Boton("Importar personaje", onImportar)
+                if (onVincular != null) Boton("Vincular personaje", onVincular)
             }
         }
     }
 }
 
 @Composable
-private fun FilaPersonaje(r: ResumenPersonaje, onClick: () -> Unit, onExportar: () -> Unit, onEliminar: () -> Unit) {
+private fun FilaPersonaje(
+    r: ResumenPersonaje,
+    onClick: () -> Unit,
+    onExportar: () -> Unit,
+    onEliminar: () -> Unit,
+    onSincronizar: (() -> Unit)?
+) {
     val p = r.personaje
     var menu by remember { mutableStateOf(false) }
     val c = Marca.colores
@@ -208,6 +372,9 @@ private fun FilaPersonaje(r: ResumenPersonaje, onClick: () -> Unit, onExportar: 
             onClickLargo = { menu = true }
         )
         MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
+            if (onSincronizar != null) {
+                DropdownMenuItem(text = { Text("Sincronizar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onSincronizar() })
+            }
             DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onExportar() })
             DropdownMenuItem(text = { Text("Eliminar", style = Tipos.ui, color = c.sangre) }, onClick = { menu = false; onEliminar() })
         }

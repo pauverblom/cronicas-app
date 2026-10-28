@@ -1,0 +1,27 @@
+rules_version = '2';
+
+// Reglas de Firestore para la sincronización de personajes. Se pegan en la consola de Firebase
+// (Firestore Database → Reglas → Publicar).
+//
+// Cada personaje sincronizado es personajes/{codigo}. Solo puede leerlo o escribirlo quien conoce su código
+// (12 caracteres aleatorios), y siempre desde la app (sesión anónima de Firebase). No se pueden listar
+// los personajes ni borrarlos desde la app.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /personajes/{codigo} {
+      allow get: if request.auth != null;
+      allow create, update: if request.auth != null
+        && codigo.size() == 12
+        && request.resource.data.keys().hasOnly(['formato', 'datos', 'retratoHash', 'actualizado'])
+        && request.resource.data.datos is string
+        && request.resource.data.datos.size() < 900000;
+
+      match /retrato/{doc} {
+        allow get: if request.auth != null;
+        allow create, update: if request.auth != null
+          && doc == 'actual'
+          && request.resource.data.keys().hasOnly(['hash', 'imagen']);
+      }
+    }
+  }
+}

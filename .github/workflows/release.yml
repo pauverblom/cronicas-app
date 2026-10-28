@@ -81,6 +81,22 @@ jobs:
           fi
           echo "Signing key OK"
 
+      # Firebase config for character sync. Without the secret the app builds without sync.
+      - name: Add Firebase config
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+            echo "::warning::Repository secret GOOGLE_SERVICES_JSON is not set: this release has no character sync"
+            exit 0
+          fi
+          mkdir -p app/src/release
+          printf '%s' "$GOOGLE_SERVICES_JSON" > app/src/release/google-services.json
+          if ! python3 -c "import json,sys; d=json.load(open(sys.argv[1])); assert any(c['client_info']['android_client_info']['package_name']=='io.github.pauverblom.cronicas' for c in d['client'])" app/src/release/google-services.json; then
+            echo "::error::GOOGLE_SERVICES_JSON is not valid JSON or has no Android app with package io.github.pauverblom.cronicas"
+            exit 1
+          fi
+
       - name: Build signed APK
         env:
           CRONICAS_KEYSTORE_PATH: ${{ runner.temp }}/release.jks

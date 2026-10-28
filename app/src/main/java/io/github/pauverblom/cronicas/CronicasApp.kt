@@ -5,6 +5,8 @@ import io.github.pauverblom.cronicas.data.AjustesRepository
 import io.github.pauverblom.cronicas.data.AppDatabase
 import io.github.pauverblom.cronicas.data.Repository
 import io.github.pauverblom.cronicas.data.SeedData
+import io.github.pauverblom.cronicas.data.sync.Sincronizador
+import io.github.pauverblom.cronicas.ui.foto.Retratos
 import io.github.pauverblom.cronicas.ui.common.Ilustraciones
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -22,6 +24,9 @@ class CronicasApp : Application() {
     lateinit var ajustes: AjustesRepository
         private set
 
+    lateinit var sincronizador: Sincronizador
+        private set
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
@@ -30,6 +35,8 @@ class CronicasApp : Application() {
         repository = Repository(database)
         ajustes = AjustesRepository(this)
         Ilustraciones.cargar(assets)
+        sincronizador = Sincronizador(this, repository, Retratos.directorio(this))
+        sincronizador.iniciar()
         appScope.launch {
             SeedData.seedIfEmpty(repository, assets)
         }
