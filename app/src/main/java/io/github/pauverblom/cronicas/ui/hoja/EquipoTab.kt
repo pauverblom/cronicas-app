@@ -1,6 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
-import android.widget.Toast
+import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -380,7 +379,7 @@ private fun CatalogoSheet(
     onAnadir: (ArticuloDef, Int, Boolean, (Boolean) -> Unit) -> Unit,
     onPersonalizado: () -> Unit
 ) {
-    val context = LocalContext.current
+    val aviso = rememberAviso()
     val c = Marca.colores
     var pestana by remember { mutableStateOf(PestanaCatalogo.ARMAS) }
     var busqueda by remember { mutableStateOf("") }
@@ -444,7 +443,7 @@ private fun CatalogoSheet(
         val disponible = Monedas.Bolsa(tesoro.cobre, tesoro.plata, tesoro.electro, tesoro.oro, tesoro.platino).totalMc
         FormularioDialog(a.nombre, onDismiss = { elegido = null }, guardar = "Añadir", onGuardar = {
             onAnadir(a, n, comprar) { ok ->
-                Toast.makeText(context, if (ok) "${a.nombre} añadido" else "No tienes suficiente dinero", Toast.LENGTH_SHORT).show()
+                aviso(if (ok) "${a.nombre} añadido" else "No tienes suficiente dinero")
             }
             elegido = null
         }) {

@@ -1,10 +1,9 @@
 package io.github.pauverblom.cronicas.ui.home
 
-import android.app.Application
-import android.net.Uri
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import io.github.pauverblom.cronicas.ui.plataforma.modeloRetrato
+import io.github.pauverblom.cronicas.ui.plataforma.rememberAbrirArchivo
+import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
+import io.github.pauverblom.cronicas.ui.plataforma.rememberGuardarArchivo
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,26 +41,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.pauverblom.cronicas.CronicasApp
-import io.github.pauverblom.cronicas.data.Backup
 import io.github.pauverblom.cronicas.data.Campana
 import io.github.pauverblom.cronicas.data.DatosCampanas
 import io.github.pauverblom.cronicas.data.Personaje
 import io.github.pauverblom.cronicas.data.ResumenPersonaje
-import io.github.pauverblom.cronicas.data.sync.Sincronizador
+import io.github.pauverblom.cronicas.data.sync.Codigos
 import io.github.pauverblom.cronicas.rules.data.Clases
 import io.github.pauverblom.cronicas.rules.data.Especies
 import io.github.pauverblom.cronicas.ui.common.ConfirmarDialog
 import io.github.pauverblom.cronicas.ui.common.FormularioDialog
 import io.github.pauverblom.cronicas.ui.common.llamaDe
-import io.github.pauverblom.cronicas.ui.foto.Retratos
 import io.github.pauverblom.cronicas.ui.hud.Boton
 import io.github.pauverblom.cronicas.ui.hud.BotonIcono
 import io.github.pauverblom.cronicas.ui.hud.Cabecera
@@ -77,71 +70,6 @@ import io.github.pauverblom.cronicas.ui.hud.TituloPantalla
 import io.github.pauverblom.cronicas.ui.hud.Variante
 import io.github.pauverblom.cronicas.ui.theme.Marca
 import io.github.pauverblom.cronicas.ui.theme.Tipos
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-
-class HomeViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = (app as CronicasApp).repository
-    private val sync = (app as CronicasApp).sincronizador
-    private val campanasRepo = (app as CronicasApp).campanas
-
-    val syncDisponible = sync.disponible
-    val vinculos = sync.vinculos
-
-    val personajes = repo.resumenes().map<List<ResumenPersonaje>, List<ResumenPersonaje>?> { it }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    val campanas = campanasRepo.datos.map<DatosCampanas, DatosCampanas?> { it }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
-    fun eliminar(p: Personaje) = viewModelScope.launch {
-        repo.deletePersonaje(p)
-        campanasRepo.editar { it.mover(p.id, null) }
-    }
-
-    fun moverACampana(pid: Long, campanaId: Long?) = viewModelScope.launch { campanasRepo.editar { it.mover(pid, campanaId) } }
-    fun crearCampana(pid: Long, nombre: String) = viewModelScope.launch { campanasRepo.editar { it.crearYMover(pid, nombre) } }
-    fun renombrarCampana(id: Long, nombre: String) = viewModelScope.launch { campanasRepo.editar { it.renombrar(id, nombre) } }
-    fun disolverCampana(id: Long) = viewModelScope.launch { campanasRepo.editar { it.disolver(id) } }
-    fun plegarCampana(id: Long, plegada: Boolean) = viewModelScope.launch { campanasRepo.editar { it.plegar(id, plegada) } }
-
-    fun exportar(pid: Long, uri: Uri, onFin: (Boolean) -> Unit) = viewModelScope.launch {
-        val ok = runCatching {
-            val json = Backup.exportar(repo, pid)
-            withContext(Dispatchers.IO) {
-                getApplication<Application>().contentResolver.openOutputStream(uri)!!.use { it.write(json.toByteArray()) }
-            }
-        }.isSuccess
-        onFin(ok)
-    }
-
-    fun activarSync(pid: Long, onFin: (String?) -> Unit) = viewModelScope.launch {
-        onFin(runCatching { sync.activar(pid) }.getOrNull())
-    }
-
-    /** Devuelve el id del personaje vinculado, o el mensaje de error. */
-    fun vincular(codigo: String, onFin: (Result<Long>) -> Unit) = viewModelScope.launch {
-        onFin(runCatching { sync.vincular(codigo) })
-    }
-
-    fun desvincular(pid: Long) = sync.desvincular(pid)
-
-    fun importar(uri: Uri, onFin: (Long?) -> Unit) = viewModelScope.launch {
-        val app = getApplication<Application>()
-        val id = runCatching {
-            val texto = withContext(Dispatchers.IO) {
-                app.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
-            }
-            Backup.importar(repo, texto, Retratos.directorio(app))
-        }.getOrNull()
-        onFin(id)
-    }
-}
 
 @Composable
 fun HomeScreen(
@@ -153,7 +81,7 @@ fun HomeScreen(
     val personajes by vm.personajes.collectAsState()
     val vinculos by vm.vinculos.collectAsState()
     val campanas by vm.campanas.collectAsState()
-    val context = LocalContext.current
+    val aviso = rememberAviso()
     var exportando by remember { mutableStateOf<Personaje?>(null) }
     var borrando by remember { mutableStateOf<Personaje?>(null) }
     var sincronizando by remember { mutableStateOf<Personaje?>(null) }
@@ -162,19 +90,16 @@ fun HomeScreen(
     var renombrando by remember { mutableStateOf<Campana?>(null) }
     var disolviendo by remember { mutableStateOf<Campana?>(null) }
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        val p = exportando ?: return@rememberLauncherForActivityResult
+    val exportar = rememberGuardarArchivo("application/json") { archivo ->
+        val p = exportando ?: return@rememberGuardarArchivo
         exportando = null
-        if (uri != null) vm.exportar(p.id, uri) { ok ->
-            Toast.makeText(context, if (ok) "Personaje exportado" else "No se pudo exportar", Toast.LENGTH_SHORT).show()
+        vm.exportar(p.id, archivo) { ok -> aviso(if (ok) "Personaje exportado" else "No se pudo exportar") }
+    }
+    val importar = rememberAbrirArchivo(arrayOf("application/json", "application/octet-stream", "*/*")) { archivo ->
+        vm.importar(archivo) { id ->
+            if (id != null) onAbrir(id) else aviso("El archivo no es un personaje válido", largo = true)
         }
     }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) vm.importar(uri) { id ->
-            if (id != null) onAbrir(id) else Toast.makeText(context, "El archivo no es un personaje válido", Toast.LENGTH_LONG).show()
-        }
-    }
-    val importar = { importLauncher.launch(arrayOf("application/json", "application/octet-stream", "*/*")) }
 
     Column(Modifier.fillMaxSize()) {
         Cabecera(
@@ -226,7 +151,7 @@ fun HomeScreen(
                                 onClick = { onAbrir(r.personaje.id) },
                                 onExportar = {
                                     exportando = r.personaje
-                                    exportLauncher.launch("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
+                                    exportar("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
                                 },
                                 onEliminar = { borrando = r.personaje },
                                 onSincronizar = if (vm.syncDisponible) ({ sincronizando = r.personaje }) else null,
@@ -289,7 +214,7 @@ fun HomeScreen(
                 vm.activarSync(p.id) { codigo ->
                     onFin()
                     if (codigo == null) {
-                        Toast.makeText(context, "No se pudo activar. ¿Hay conexión a internet?", Toast.LENGTH_LONG).show()
+                        aviso("No se pudo activar. ¿Hay conexión a internet?", largo = true)
                     }
                 }
             },
@@ -424,7 +349,7 @@ private fun SincronizarDialog(
 ) {
     var activando by remember { mutableStateOf(false) }
     val portapapeles = LocalClipboardManager.current
-    val context = LocalContext.current
+    val aviso = rememberAviso()
     val c = Marca.colores
     if (codigo == null) {
         Dialogo(
@@ -442,7 +367,7 @@ private fun SincronizarDialog(
             Text("Al activarla tendrás un código para vincular el personaje en el otro dispositivo.", style = Tipos.uiSm, color = c.tintaSuave)
         }
     } else {
-        val visible = Sincronizador.formatear(codigo)
+        val visible = Codigos.formatear(codigo)
         Dialogo(
             "Sincronizado",
             onDismiss = onDismiss,
@@ -452,7 +377,7 @@ private fun SincronizarDialog(
             acciones = {
                 Boton("Copiar", {
                     portapapeles.setText(AnnotatedString(visible))
-                    Toast.makeText(context, "Código copiado", Toast.LENGTH_SHORT).show()
+                    aviso("Código copiado")
                 })
                 Boton("Cerrar", onDismiss, variante = Variante.DORADO)
             }
@@ -470,7 +395,7 @@ private fun VincularDialog(onVincular: (codigo: String, onError: (String) -> Uni
     var codigo by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
     var vinculando by remember { mutableStateOf(false) }
-    val completo = Sincronizador.normalizar(codigo).length == Sincronizador.LARGO_CODIGO
+    val completo = Codigos.normalizar(codigo).length == Codigos.LARGO
     FormularioDialog(
         titulo = "Vincular personaje",
         onDismiss = onDismiss,
@@ -532,7 +457,7 @@ private fun FilaPersonaje(
     Box {
         EntradaLista(
             nombre = p.nombre,
-            retrato = remember(p.fotoPath) { p.fotoPath?.let(::File)?.takeIf { it.exists() } },
+            retrato = remember(p.fotoPath) { modeloRetrato(p.fotoPath) },
             linea = linea,
             pg = r.estado?.pgActuales,
             pgMax = r.estado?.pgMaximos,

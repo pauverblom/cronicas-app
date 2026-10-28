@@ -2,7 +2,6 @@ package io.github.pauverblom.cronicas.data
 
 import android.util.Base64
 import androidx.room.withTransaction
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.io.File
 
@@ -13,29 +12,7 @@ import java.io.File
  */
 object Backup {
 
-    const val FORMATO = 1
-
-    @Serializable
-    data class ConjuroExportado(val conjuro: Conjuro, val nivel: Int, val preparadoVeces: Int, val usadoVeces: Int)
-
-    @Serializable
-    data class PersonajeExportado(
-        val formato: Int = FORMATO,
-        val personaje: Personaje,
-        val caracteristicas: Caracteristicas?,
-        val estado: Estado?,
-        val tesoro: Tesoro?,
-        val objetos: List<Objeto>,
-        val habilidades: List<Habilidad>,
-        val condiciones: List<Condicion>,
-        val companias: List<Compania>,
-        val conjuros: List<ConjuroExportado>,
-        val espacios: List<EspacioOverride>,
-        val notas: List<Nota>,
-        val retratoBase64: String? = null,
-        /** Conjuros guardados en pergaminos, con el id que referencia [Objeto.conjuroId]. */
-        val conjurosPergaminos: List<Conjuro> = emptyList()
-    )
+    const val FORMATO = FORMATO_FICHA
 
     internal val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 

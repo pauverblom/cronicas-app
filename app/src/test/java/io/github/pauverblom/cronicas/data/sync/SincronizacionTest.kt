@@ -6,8 +6,8 @@ import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import io.github.pauverblom.cronicas.data.AppDatabase
 import io.github.pauverblom.cronicas.data.Backup
-import io.github.pauverblom.cronicas.data.Backup.ConjuroExportado
-import io.github.pauverblom.cronicas.data.Backup.PersonajeExportado
+import io.github.pauverblom.cronicas.data.ConjuroExportado
+import io.github.pauverblom.cronicas.data.PersonajeExportado
 import io.github.pauverblom.cronicas.data.Caracteristicas
 import io.github.pauverblom.cronicas.data.Compania
 import io.github.pauverblom.cronicas.data.Conjuro
@@ -74,8 +74,8 @@ class CanonicaTest {
 
     @Test
     fun codigos() {
-        assertEquals("K7QM2XPA9RTE", Sincronizador.normalizar(" k7qm-2xpa 9rte "))
-        assertEquals("K7QM-2XPA-9RTE", Sincronizador.formatear("K7QM2XPA9RTE"))
+        assertEquals("K7QM2XPA9RTE", Codigos.normalizar(" k7qm-2xpa 9rte "))
+        assertEquals("K7QM-2XPA-9RTE", Codigos.formatear("K7QM2XPA9RTE"))
     }
 }
 

@@ -77,7 +77,9 @@ fun conSigno(n: Int): String = when {
 /** Millares a la española a partir de cinco cifras: 2500, 12.500. */
 fun miles(n: Int): String {
     if (kotlin.math.abs(n) < 10_000) return n.toString()
-    return "%,d".format(java.util.Locale.GERMANY, n)
+    // Separador de miles con punto, como en español: 12345 → «12.345»
+    val cifras = kotlin.math.abs(n.toLong()).toString().reversed().chunked(3).joinToString(".").reversed()
+    return if (n < 0) "-$cifras" else cifras
 }
 
 /** Color de los PG según su estado: sano > 50 %, herido ≤ 50 %, crítico ≤ 25 %, ninguno a 0. */

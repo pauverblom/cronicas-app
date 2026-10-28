@@ -1,7 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
@@ -22,38 +21,20 @@ import io.github.pauverblom.cronicas.data.Objeto
 import io.github.pauverblom.cronicas.data.Personaje
 import io.github.pauverblom.cronicas.data.Tesoro
 import io.github.pauverblom.cronicas.rules.Hoja
-import io.github.pauverblom.cronicas.rules.HojaDerivada
 import io.github.pauverblom.cronicas.rules.data.ArticuloDef
 import io.github.pauverblom.cronicas.rules.data.Categoria
 import io.github.pauverblom.cronicas.ui.RutaHoja
 import io.github.pauverblom.cronicas.ui.foto.Retratos
-import kotlinx.coroutines.Dispatchers
+import io.github.pauverblom.cronicas.ui.plataforma.Archivo
+import io.github.pauverblom.cronicas.ui.plataforma.ahora
+import io.github.pauverblom.cronicas.ui.plataforma.escribirArchivo
+import io.github.pauverblom.cronicas.ui.plataforma.leerArchivo
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.File
-
-data class HojaUi(
-    val personaje: Personaje,
-    val caracteristicas: Caracteristicas,
-    val estado: Estado,
-    val objetos: List<Objeto>,
-    val tesoro: Tesoro,
-    val habilidades: List<Habilidad>,
-    val condiciones: List<Condicion>,
-    val companias: List<Compania>,
-    val conjuros: List<ConjuroConDetalle>,
-    val espacios: List<EspacioOverride>,
-    val notas: List<Nota>,
-    val hoja: HojaDerivada
-) {
-    /** La pestaña Magia aparece para clases lanzadoras o si el personaje ya tiene conjuros. */
-    val muestraMagia: Boolean get() = hoja.esLanzador || conjuros.isNotEmpty()
-}
 
 private data class Base(val p: Personaje?, val c: Caracteristicas?, val e: Estado?, val o: List<Objeto>, val t: Tesoro?)
 private data class Extra(val h: List<Habilidad>, val cond: List<Condicion>, val comp: List<Compania>)
@@ -90,15 +71,15 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
         repo.getPersonaje(pid)?.let { repo.updatePersonaje(f(it)) }
     }
 
-    fun setRetrato(uri: Uri) = lanzar {
+    fun setRetrato(archivo: Archivo) = lanzar {
         val p = repo.getPersonaje(pid) ?: return@lanzar
-        val (path, semilla) = runCatching { Retratos.guardar(getApplication(), pid, uri, p.fotoPath) }.getOrNull() ?: return@lanzar
+        val (path, semilla) = runCatching { Retratos.guardar(getApplication(), pid, archivo, p.fotoPath) }.getOrNull() ?: return@lanzar
         repo.updatePersonaje(p.copy(fotoPath = path, colorSemilla = semilla))
     }
 
     fun quitarRetrato() = lanzar {
         val p = repo.getPersonaje(pid) ?: return@lanzar
-        p.fotoPath?.let { File(it).delete() }
+        p.fotoPath?.let { Retratos.borrar(it) }
         repo.updatePersonaje(p.copy(fotoPath = null, colorSemilla = null))
     }
 
@@ -109,12 +90,10 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
         onFin()
     }
 
-    fun exportar(uri: Uri, onFin: (Boolean) -> Unit) = lanzar {
+    fun exportar(archivo: Archivo, onFin: (Boolean) -> Unit) = lanzar {
         val ok = runCatching {
             val json = Backup.exportar(repo, pid)
-            withContext(Dispatchers.IO) {
-                getApplication<Application>().contentResolver.openOutputStream(uri)!!.use { it.write(json.toByteArray()) }
-            }
+            escribirArchivo(getApplication(), archivo, json.encodeToByteArray())
         }.isSuccess
         onFin(ok)
     }
@@ -228,11 +207,9 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
     /** Conjuro propio que no se aprende, p. ej. el de un pergamino que da el Narrador. */
     fun crearConjuroPropio(c: Conjuro, onFin: (Long) -> Unit) = lanzar { onFin(repo.insertConjuro(c.copy(esPropio = true))) }
 
-    fun importarCsv(uri: Uri, onFin: (Int) -> Unit) = lanzar {
+    fun importarCsv(archivo: Archivo, onFin: (Int) -> Unit) = lanzar {
         val n = runCatching {
-            val texto = withContext(Dispatchers.IO) {
-                getApplication<Application>().contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }
-            }
+            val texto = leerArchivo(getApplication(), archivo).decodeToString()
             repo.importConjurosFromCsv(texto)
         }.getOrDefault(0)
         onFin(n)
@@ -240,7 +217,7 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
 
     // ── Notas ──
     fun guardarNota(n: Nota) = lanzar {
-        if (n.id == 0L) repo.insertNota(n.copy(personajeId = pid)) else repo.updateNota(n.copy(timestamp = System.currentTimeMillis()))
+        if (n.id == 0L) repo.insertNota(n.copy(personajeId = pid)) else repo.updateNota(n.copy(timestamp = ahora()))
     }
 
     fun eliminarNota(id: Long) = lanzar { repo.deleteNota(id) }

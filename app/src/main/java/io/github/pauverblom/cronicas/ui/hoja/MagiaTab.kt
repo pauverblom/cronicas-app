@@ -1,8 +1,7 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
+import io.github.pauverblom.cronicas.ui.plataforma.rememberAbrirArchivo
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -26,7 +25,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import io.github.pauverblom.cronicas.data.Conjuro
 import io.github.pauverblom.cronicas.data.ConjuroConDetalle
@@ -245,13 +243,13 @@ private class Buscador(val listas: List<String>) {
 
 @Composable
 private fun rememberBuscador(ui: HojaUi, vm: HojaViewModel): Buscador {
-    val context = LocalContext.current
+    val aviso = rememberAviso()
     val listas = ui.hoja.magia.mapNotNull { it.clase.listaConjuros }
     val b = remember(listas) { Buscador(listas) }
-    val csv = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) vm.importarCsv(uri) { n -> Toast.makeText(context, "$n conjuros importados", Toast.LENGTH_SHORT).show() }
+    val csv = rememberAbrirArchivo(arrayOf("text/*", "*/*")) { archivo ->
+        vm.importarCsv(archivo) { n -> aviso("$n conjuros importados") }
     }
-    b.importarCsv = { csv.launch(arrayOf("text/*", "*/*")) }
+    b.importarCsv = csv
     return b
 }
 

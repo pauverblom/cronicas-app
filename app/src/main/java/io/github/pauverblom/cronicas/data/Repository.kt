@@ -3,14 +3,9 @@ package io.github.pauverblom.cronicas.data
 import androidx.room.withTransaction
 import io.github.pauverblom.cronicas.rules.Monedas
 import io.github.pauverblom.cronicas.rules.data.ArticuloDef
-import io.github.pauverblom.cronicas.rules.data.Clases
-import io.github.pauverblom.cronicas.rules.data.Especies
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import java.io.File
-
-/** Lo que muestra cada tarjeta de la pantalla de inicio. */
-data class ResumenPersonaje(val personaje: Personaje, val estado: Estado?)
 
 class Repository(private val db: AppDatabase) {
 
@@ -55,29 +50,8 @@ class Repository(private val db: AppDatabase) {
      */
     suspend fun sincronizarHabilidades(pid: Long) {
         val p = db.personajeDao().getById(pid) ?: return
-        val clase = Clases.porId(p.claseId)
-        val secundaria = Clases.porId(p.claseSecundariaId)
-        val especie = Especies.porId(p.especieId)
-        val nivelSec = maxOf(1, p.nivel / 2)
-        val deClase = (clase?.habilidades.orEmpty().filter { it.nivel <= p.nivel } +
-            secundaria?.habilidades.orEmpty().filter { it.nivel <= nivelSec }).distinctBy { it.nombre }
-        val deEspecie = especie?.rasgos.orEmpty()
-        val todasClase = (clase?.habilidades.orEmpty() + secundaria?.habilidades.orEmpty()).map { it.nombre }.toSet()
-
-        val actuales = db.habilidadDao().getAll(pid)
-        for (h in actuales) {
-            val sobra = when (h.origen) {
-                Habilidad.ORIGEN_CLASE -> h.nombre !in todasClase
-                Habilidad.ORIGEN_ESPECIE -> deEspecie.none { it.nombre == h.nombre }
-                else -> false
-            }
-            if (sobra) db.habilidadDao().delete(h)
-        }
-        val existentes = actuales.map { it.origen to it.nombre }.toSet()
-        val nuevas = deClase.filter { (Habilidad.ORIGEN_CLASE to it.nombre) !in existentes }
-            .map { Habilidad(personajeId = pid, origen = Habilidad.ORIGEN_CLASE, nombre = it.nombre, atributo = it.atributo?.abrev, descripcion = it.descripcion) } +
-            deEspecie.filter { (Habilidad.ORIGEN_ESPECIE to it.nombre) !in existentes }
-                .map { Habilidad(personajeId = pid, origen = Habilidad.ORIGEN_ESPECIE, nombre = it.nombre, atributo = it.atributo?.abrev, descripcion = it.descripcion) }
+        val (sobran, nuevas) = habilidadesDeReglamento(p, db.habilidadDao().getAll(pid))
+        sobran.forEach { db.habilidadDao().delete(it) }
         if (nuevas.isNotEmpty()) db.habilidadDao().insertAll(nuevas)
     }
 
@@ -171,44 +145,9 @@ class Repository(private val db: AppDatabase) {
      * "clases" usa el formato "mago=1;clerigo=2".
      */
     suspend fun importConjurosFromCsv(csvContent: String): Int {
-        val lines = csvContent.lines().filter { it.isNotBlank() }
-        if (lines.size < 2) return 0
-        val conjuros = lines.drop(1).mapNotNull { line ->
-            val f = parseCsvLine(line).map { it.trim() }
-            if (f.size < 2 || f[0].isBlank()) return@mapNotNull null
-            Conjuro(
-                nombre = f[0],
-                niveles = f.getOrElse(1) { "" },
-                tl = f.getOrElse(2) { "" },
-                componentes = f.getOrElse(3) { "" },
-                alcance = f.getOrElse(4) { "" },
-                duracion = f.getOrElse(5) { "" },
-                ts = f.getOrElse(6) { "" },
-                rc = f.getOrElse(7) { "" },
-                descripcion = f.getOrElse(8) { "" },
-                esPropio = true
-            )
-        }
+        val conjuros = conjurosDesdeCsv(csvContent)
         if (conjuros.isNotEmpty()) db.conjuroDao().insertAll(conjuros)
         return conjuros.size
-    }
-
-    private fun parseCsvLine(line: String): List<String> {
-        val result = mutableListOf<String>()
-        var current = StringBuilder()
-        var inQuotes = false
-        for (ch in line) {
-            when {
-                ch == '"' -> inQuotes = !inQuotes
-                ch == ',' && !inQuotes -> {
-                    result.add(current.toString())
-                    current = StringBuilder()
-                }
-                else -> current.append(ch)
-            }
-        }
-        result.add(current.toString())
-        return result
     }
 
     // ── Notas ──
@@ -220,24 +159,6 @@ class Repository(private val db: AppDatabase) {
     internal val database: AppDatabase get() = db
 
     companion object {
-        fun objetoDesde(pid: Long, art: ArticuloDef, lotes: Int = 1) = Objeto(
-            personajeId = pid,
-            categoria = art.categoria.name,
-            catalogId = art.id,
-            nombre = art.nombre,
-            cantidad = art.unidades * lotes,
-            ve = art.ve / art.unidades,
-            capacidad = art.capacidad,
-            formulaDano = art.dano.orEmpty(),
-            formulaDanoDosManos = art.danoDosManos.orEmpty(),
-            tipoArma = art.tipo.name,
-            alcance = art.alcance,
-            dosManos = art.dosManos,
-            ca = art.ca,
-            notas = art.notas
-        )
+        fun objetoDesde(pid: Long, art: ArticuloDef, lotes: Int = 1) = objetoDeCatalogo(pid, art, lotes)
     }
 }
-
-fun Tesoro.bolsa() = Monedas.Bolsa(cobre, plata, electro, oro, platino)
-fun Tesoro.conBolsa(b: Monedas.Bolsa) = copy(cobre = b.cobre, plata = b.plata, electro = b.electro, oro = b.oro, platino = b.platino)

@@ -199,4 +199,9 @@ fun FormularioDialog(
 
 fun signo(n: Int): String = conSigno(n)
 
-fun formatoVe(v: Float): String = if (v % 1f == 0f) v.toInt().toString() else "%.1f".format(v).replace('.', ',')
+fun formatoVe(v: Float): String {
+    if (v % 1f == 0f) return v.toInt().toString()
+    // Una cifra decimal con coma, como "%.1f" en español: 2.25 → «2,3», -0.5 → «-0,5»
+    val decimas = kotlin.math.floor(kotlin.math.abs(v.toDouble()) * 10 + 0.5).toInt()
+    return (if (v < 0) "-" else "") + "${decimas / 10},${decimas % 10}"
+}

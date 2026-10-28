@@ -1,7 +1,6 @@
 package io.github.pauverblom.cronicas.ui.ajustes
 
-import android.app.Application
-import android.os.Build
+import io.github.pauverblom.cronicas.ui.plataforma.materialYouDisponible
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,10 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.pauverblom.cronicas.CronicasApp
 import io.github.pauverblom.cronicas.data.AjustesApp
 import io.github.pauverblom.cronicas.data.Modo
 import io.github.pauverblom.cronicas.data.Tema
@@ -40,14 +36,6 @@ import io.github.pauverblom.cronicas.ui.hud.Tono
 import io.github.pauverblom.cronicas.ui.hud.Ventana
 import io.github.pauverblom.cronicas.ui.theme.Marca
 import io.github.pauverblom.cronicas.ui.theme.Tipos
-import kotlinx.coroutines.launch
-
-class AjustesViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = (app as CronicasApp).ajustes
-    val ajustes = repo.ajustes
-    fun setTema(t: Tema) = viewModelScope.launch { repo.setTema(t) }
-    fun setModo(m: Modo) = viewModelScope.launch { repo.setModo(m) }
-}
 
 @Composable
 fun AjustesScreen(onVolver: () -> Unit, vm: AjustesViewModel = viewModel()) {
@@ -69,7 +57,7 @@ fun AjustesScreen(onVolver: () -> Unit, vm: AjustesViewModel = viewModel()) {
             Ventana("Tema", Modifier.widthIn(max = 560.dp)) {
                 Tema.entries.forEachIndexed { i, t ->
                     if (i > 0) Filete()
-                    val disponible = t != Tema.MATERIAL_YOU || Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    val disponible = t != Tema.MATERIAL_YOU || materialYouDisponible()
                     Opcion(ajustes.tema == t, { vm.setTema(t) }, Modifier.fillMaxWidth(), activa = disponible) {
                         Column(Modifier.padding(start = 4.dp, top = 6.dp, bottom = 6.dp)) {
                             Text(t.etiqueta, style = Tipos.ui, color = if (disponible) c.tinta else c.tintaTenue)

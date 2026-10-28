@@ -14,6 +14,7 @@ import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.MetadataChanges
 import com.google.firebase.firestore.Source
 import io.github.pauverblom.cronicas.data.Backup
+import io.github.pauverblom.cronicas.data.PersonajeExportado
 import io.github.pauverblom.cronicas.data.Repository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,7 +39,7 @@ import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Sincroniza fichas entre dispositivos con Firestore. Cada personaje sincronizado es un documento
- * `personajes/{codigo}` con su ficha ([Backup.PersonajeExportado] sin retrato) en «datos"; el retrato va en
+ * `personajes/{codigo}` con su ficha ([PersonajeExportado] sin retrato) en «datos"; el retrato va en
  * `personajes/{codigo}/retrato/actual` y solo se sube cuando cambia. Gana el último cambio.
  *
  * Sin `google-services.json` en la compilación, Firebase no se inicia y [disponible] es false: la app funciona igual
@@ -111,7 +112,7 @@ class Sincronizador(context: Context, private val repo: Repository, private val 
     /** Descarga el personaje de [codigo] como personaje nuevo y lo deja sincronizado. Devuelve su id. */
     suspend fun vincular(codigo: String): Long {
         val c = normalizar(codigo)
-        require(c.length == LARGO_CODIGO) { "El código tiene $LARGO_CODIGO letras y números" }
+        require(c.length == Codigos.LARGO) { "El código tiene ${Codigos.LARGO} letras y números" }
         _vinculos.value.entries.firstOrNull { it.value == c }?.let { return it.key }
         asegurarSesion()
         val snap = withTimeout(20_000) { doc(c).get(Source.SERVER).await() }
@@ -169,7 +170,7 @@ class Sincronizador(context: Context, private val repo: Repository, private val 
         ref.set(
             mapOf(
                 CAMPO_FORMATO to Backup.FORMATO,
-                CAMPO_DATOS to Backup.json.encodeToString(Backup.PersonajeExportado.serializer(), e),
+                CAMPO_DATOS to Backup.json.encodeToString(PersonajeExportado.serializer(), e),
                 // Si hay un retrato remoto que aún no se ha podido descargar, se respeta el de la nube
                 CAMPO_RETRATO to (retratoNube[pid] ?: hash),
                 CAMPO_ACTUALIZADO to FieldValue.serverTimestamp()
@@ -240,11 +241,11 @@ class Sincronizador(context: Context, private val repo: Repository, private val 
 
     private fun doc(codigo: String): DocumentReference = firestore.collection(COLECCION).document(codigo)
 
-    private fun leerFicha(snap: DocumentSnapshot): Backup.PersonajeExportado? {
+    private fun leerFicha(snap: DocumentSnapshot): PersonajeExportado? {
         val formato = snap.getLong(CAMPO_FORMATO)?.toInt() ?: return null
         if (formato > Backup.FORMATO) return null
         val datos = snap.getString(CAMPO_DATOS) ?: return null
-        return runCatching { Backup.json.decodeFromString(Backup.PersonajeExportado.serializer(), datos) }
+        return runCatching { Backup.json.decodeFromString(PersonajeExportado.serializer(), datos) }
             .onFailure { Log.w(TAG, "Ficha remota ilegible", it) }
             .getOrNull()
     }
@@ -297,20 +298,12 @@ class Sincronizador(context: Context, private val repo: Repository, private val 
             "condicion", "compania", "conjuro_personaje", "espacio_override", "nota"
         )
 
-        /** Sin 0/O, 1/I/L, para que se pueda dictar en la mesa sin confusiones. */
-        private const val ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-        const val LARGO_CODIGO = 12
-
         private fun nuevoCodigo(): String {
             val r = SecureRandom()
-            return (1..LARGO_CODIGO).map { ALFABETO[r.nextInt(ALFABETO.length)] }.joinToString("")
+            return Codigos.nuevo { r.nextInt(it) }
         }
 
-        /** Mayúsculas y sin guiones ni espacios: «k7qm-2xpa-...» → «K7QM2XPA...». */
-        fun normalizar(codigo: String): String = codigo.uppercase().filter { it.isLetterOrDigit() }
-
-        /** «K7QM2XPA9RTE» → «K7QM-2XPA-9RTE». */
-        fun formatear(codigo: String): String = codigo.chunked(4).joinToString("-")
+        fun normalizar(codigo: String): String = Codigos.normalizar(codigo)
 
         private fun sha256(bytes: ByteArray): String =
             MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }

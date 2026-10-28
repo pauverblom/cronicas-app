@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import io.github.pauverblom.cronicas.ui.plataforma.propiedadesDialogo
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -72,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import io.github.pauverblom.cronicas.ui.common.Llama
 import io.github.pauverblom.cronicas.ui.common.animacionesActivas
 import io.github.pauverblom.cronicas.ui.common.llamaDe
@@ -320,7 +320,7 @@ fun Dialogo(
     val c = Marca.colores
     // La ventana del diálogo ocupa la pantalla y se aparta del teclado: el cuerpo se desplaza y los botones
     // quedan siempre a la vista. Tocar fuera de la tarjeta lo cierra, como en un diálogo normal.
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+    Dialog(onDismissRequest = onDismiss, properties = propiedadesDialogo()) {
         Box(
             Modifier
                 .fillMaxSize()

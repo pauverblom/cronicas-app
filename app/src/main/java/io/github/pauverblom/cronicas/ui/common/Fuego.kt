@@ -1,6 +1,6 @@
 package io.github.pauverblom.cronicas.ui.common
 
-import android.provider.Settings
+import io.github.pauverblom.cronicas.ui.plataforma.animacionesDelSistema
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -21,7 +21,6 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import kotlin.math.PI
 import kotlin.math.cos
@@ -79,10 +78,7 @@ val LocalAnimacionesVisibles = staticCompositionLocalOf { true }
  */
 @Composable
 fun animacionesActivas(): Boolean {
-    val context = LocalContext.current
-    val sistema = remember {
-        Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
-    }
+    val sistema = animacionesDelSistema()
     return sistema && LocalAnimacionesVisibles.current
 }
 

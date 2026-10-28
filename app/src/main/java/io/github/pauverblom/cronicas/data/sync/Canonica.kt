@@ -1,7 +1,7 @@
 package io.github.pauverblom.cronicas.data.sync
 
-import io.github.pauverblom.cronicas.data.Backup.ConjuroExportado
-import io.github.pauverblom.cronicas.data.Backup.PersonajeExportado
+import io.github.pauverblom.cronicas.data.ConjuroExportado
+import io.github.pauverblom.cronicas.data.PersonajeExportado
 import io.github.pauverblom.cronicas.data.Conjuro
 import kotlinx.serialization.json.Json
 

@@ -1,8 +1,8 @@
 package io.github.pauverblom.cronicas.ui.wizard
 
-import android.app.Application
-import android.net.Uri
-import androidx.activity.compose.BackHandler
+import io.github.pauverblom.cronicas.ui.plataforma.Archivo
+import io.github.pauverblom.cronicas.ui.plataforma.ManejarAtras
+import io.github.pauverblom.cronicas.ui.plataforma.modeloArchivo
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -57,14 +57,9 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.github.pauverblom.cronicas.CronicasApp
-import io.github.pauverblom.cronicas.data.Caracteristicas
 import io.github.pauverblom.cronicas.data.PERSONALIZADA
 import io.github.pauverblom.cronicas.data.Personaje
-import io.github.pauverblom.cronicas.data.Tesoro
 import io.github.pauverblom.cronicas.rules.Atributo
 import io.github.pauverblom.cronicas.rules.Modifiers
 import io.github.pauverblom.cronicas.rules.data.Alineamientos
@@ -85,7 +80,6 @@ import io.github.pauverblom.cronicas.ui.common.animacionesActivas
 import io.github.pauverblom.cronicas.ui.common.animarLlama
 import io.github.pauverblom.cronicas.ui.common.llamaDe
 import io.github.pauverblom.cronicas.ui.common.signo
-import io.github.pauverblom.cronicas.ui.foto.Retratos
 import io.github.pauverblom.cronicas.ui.foto.rememberSelectorRetrato
 import io.github.pauverblom.cronicas.ui.hud.Boton
 import io.github.pauverblom.cronicas.ui.hud.BotonIcono
@@ -109,16 +103,13 @@ import io.github.pauverblom.cronicas.ui.hud.Variante
 import io.github.pauverblom.cronicas.ui.theme.Marca
 import io.github.pauverblom.cronicas.ui.theme.Tipos
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class WizardState(
     val paso: Int = 0,
     val nombre: String = "",
     val jugador: String = "",
-    val retrato: Uri? = null,
+    val retrato: Archivo? = null,
     val especieId: String? = null,
     val especieNombre: String = "",
     val claseId: String? = null,
@@ -171,78 +162,7 @@ data class WizardState(
     }
 }
 
-private val TITULOS = listOf("Nombre y retrato", "Especie", "Clase", "Características", "Puntos de golpe", "Trasfondo", "Oro inicial")
-
-class WizardViewModel(app: Application) : AndroidViewModel(app) {
-    private val repo = (app as CronicasApp).repository
-    private val _state = MutableStateFlow(WizardState())
-    val state = _state.asStateFlow()
-
-    fun editar(f: (WizardState) -> WizardState) = _state.update(f)
-
-    fun elegirEspecie(id: String) = _state.update { s ->
-        val esp = Especies.porId(id)
-        s.copy(especieId = id, idiomas = esp?.idiomas ?: s.idiomas).ajustarPrimarias()
-    }
-
-    fun elegirClase(id: String) = _state.update { s -> s.copy(claseId = id).ajustarPrimarias() }
-
-    fun alternarPrimaria(a: Atributo) = _state.update { s ->
-        if (a == s.clase?.principal) return@update s // la de la clase es obligatoria
-        val nuevas = if (a in s.primarias) s.primarias - a else s.primarias + a
-        if (nuevas.size > s.primariasRequeridas) s else s.copy(primarias = nuevas)
-    }
-
-    /** Mantiene marcada la característica principal de la clase y recorta si sobran primarias. */
-    private fun WizardState.ajustarPrimarias(): WizardState {
-        val principal = clase?.principal
-        var set = primarias.toMutableSet()
-        if (principal != null) set.add(principal)
-        while (set.size > primariasRequeridas) set.remove(set.first { it != principal })
-        return copy(primarias = set)
-    }
-
-    fun siguiente() = _state.update { if (it.pasoValido()) it.copy(paso = (it.paso + 1).coerceAtMost(TITULOS.lastIndex)) else it }
-    fun anterior() = _state.update { it.copy(paso = (it.paso - 1).coerceAtLeast(0)) }
-
-    fun crear(onCreado: (Long) -> Unit) {
-        val s = _state.value
-        if (s.creando) return
-        _state.update { it.copy(creando = true) }
-        viewModelScope.launch {
-            val p = Personaje(
-                nombre = s.nombre.trim(),
-                jugador = s.jugador.trim(),
-                claseId = s.claseId ?: PERSONALIZADA,
-                claseNombre = if (s.claseId == PERSONALIZADA) s.claseNombre.trim() else "",
-                claseSecundariaId = s.secundaria?.id,
-                especieId = s.especieId ?: PERSONALIZADA,
-                especieNombre = if (s.especieId == PERSONALIZADA) s.especieNombre.trim() else "",
-                alineamiento = s.alineamiento,
-                deidad = s.deidad.trim(),
-                idiomas = s.idiomas.trim(),
-                lugarOrigen = s.lugarOrigen.trim(),
-                edad = s.edad.trim(),
-                genero = s.genero.trim(),
-                altura = s.altura.trim(),
-                peso = s.peso.trim(),
-                ojos = s.ojos.trim(),
-                cabello = s.cabello.trim()
-            )
-            var c = Caracteristicas(personajeId = 0)
-            for (a in Atributo.entries) {
-                c = c.conBase(a, s.puntuacion(a) ?: 10).conPrimaria(a, a in s.primarias)
-            }
-            val id = repo.crearPersonaje(p, c, s.pgTotal ?: 1, Tesoro(0, oro = s.oro.toIntOrNull() ?: 0))
-            s.retrato?.let { uri ->
-                runCatching { Retratos.guardar(getApplication(), id, uri, null) }.getOrNull()?.let { (path, semilla) ->
-                    repo.getPersonaje(id)?.let { repo.updatePersonaje(it.copy(fotoPath = path, colorSemilla = semilla)) }
-                }
-            }
-            onCreado(id)
-        }
-    }
-}
+internal val TITULOS = listOf("Nombre y retrato", "Especie", "Clase", "Características", "Puntos de golpe", "Trasfondo", "Oro inicial")
 
 @Composable
 fun WizardScreen(onCancelar: () -> Unit, onCreado: (Long) -> Unit, vm: WizardViewModel = viewModel()) {
@@ -252,7 +172,7 @@ fun WizardScreen(onCancelar: () -> Unit, onCreado: (Long) -> Unit, vm: WizardVie
     val c = Marca.colores
     // Mientras se forja el personaje: null = sin finale; el id llega cuando termina de guardarse
     var forja by remember { mutableStateOf<Forja?>(null) }
-    BackHandler(enabled = s.paso > 0 && forja == null) { vm.anterior() }
+    ManejarAtras(activo = s.paso > 0 && forja == null) { vm.anterior() }
     Column(Modifier.fillMaxSize()) {
         Cabecera(navegacion = {
             BotonIcono(onCancelar, "Cancelar") { Icon(Icons.Sharp.Close, null, Modifier.size(24.dp)) }
@@ -334,7 +254,7 @@ private data class Forja(val id: Long? = null)
  * háptico. Al terminar, y en cuanto el personaje esté guardado ([listo]), llama a [onFin]. Tocar la pantalla lo salta.
  */
 @Composable
-private fun FinaleForja(nombre: String, retrato: Uri?, llama: Llama, listo: Boolean, onFin: () -> Unit) {
+private fun FinaleForja(nombre: String, retrato: Archivo?, llama: Llama, listo: Boolean, onFin: () -> Unit) {
     val haptica = LocalHapticFeedback.current
     val c = Marca.colores
     val fondo = remember { Animatable(0f) }
@@ -361,7 +281,7 @@ private fun FinaleForja(nombre: String, retrato: Uri?, llama: Llama, listo: Bool
     }
     LaunchedEffect(terminado, listo) { if (terminado && listo) fin() }
 
-    BackHandler {} // no se puede volver atrás a medio forjar
+    ManejarAtras {} // no se puede volver atrás a medio forjar
     Box(
         Modifier
             .fillMaxSize()
@@ -389,7 +309,7 @@ private fun FinaleForja(nombre: String, retrato: Uri?, llama: Llama, listo: Bool
         Sigilo(300.dp, Modifier.graphicsLayer { alpha = sigilo.value }, llama = llama)
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(20.dp)) {
             Retrato(
-                retrato, nombre, llama, 160.dp,
+                retrato?.let(::modeloArchivo), nombre, llama, 160.dp,
                 Modifier.graphicsLayer {
                     val e = 0.3f + 0.7f * retratoAnim.value
                     scaleX = e; scaleY = e; alpha = retratoAnim.value.coerceIn(0f, 1f)
@@ -431,7 +351,7 @@ private fun PasoNombre(s: WizardState, vm: WizardViewModel, llama: Llama) {
     Campo(s.jugador, { v -> vm.editar { it.copy(jugador = v) } }, "Nombre del jugador (opcional)")
     Subtitulo("Retrato", Modifier.padding(top = 8.dp))
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        Retrato(s.retrato, s.nombre.ifBlank { "?" }, llama, 112.dp, anillo = true)
+        Retrato(s.retrato?.let(::modeloArchivo), s.nombre.ifBlank { "?" }, llama, 112.dp, anillo = true)
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Boton("Galería", { selector(false) })
             Boton("Cámara", { selector(true) })

@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import io.github.pauverblom.cronicas.ui.plataforma.formatoFechaHora
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -34,15 +35,11 @@ import io.github.pauverblom.cronicas.ui.hud.MedallonFlotante
 import io.github.pauverblom.cronicas.ui.hud.Placa
 import io.github.pauverblom.cronicas.ui.theme.Marca
 import io.github.pauverblom.cronicas.ui.theme.Tipos
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun NotasTab(ui: HojaUi, vm: HojaViewModel) {
     var editando by remember { mutableStateOf<Nota?>(null) }
     var borrando by remember { mutableStateOf<Nota?>(null) }
-    val formato = remember { SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("es", "ES")) }
     val c = Marca.colores
 
     Box(Modifier.fillMaxSize()) {
@@ -75,7 +72,7 @@ fun NotasTab(ui: HojaUi, vm: HojaViewModel) {
                             if (n.contenido.isNotBlank()) {
                                 Text(n.contenido, style = Tipos.cuerpo, color = c.tinta, maxLines = 3, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 12.dp))
                             }
-                            Text(formato.format(Date(n.timestamp)), style = Tipos.caption, color = c.tintaSuave, modifier = Modifier.padding(top = 6.dp))
+                            Text(formatoFechaHora(n.timestamp), style = Tipos.caption, color = c.tintaSuave, modifier = Modifier.padding(top = 6.dp))
                         }
                     }
                 }

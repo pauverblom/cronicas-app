@@ -1,8 +1,7 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
-import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import io.github.pauverblom.cronicas.ui.plataforma.rememberGuardarArchivo
+import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
@@ -30,7 +29,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
@@ -67,14 +65,12 @@ fun HojaScreen(ajustes: AjustesApp, onVolver: () -> Unit, vm: HojaViewModel = vi
 
 @Composable
 private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) {
-    val context = LocalContext.current
+    val aviso = rememberAviso()
     val c = Marca.colores
     var menu by remember { mutableStateOf(false) }
     var borrar by remember { mutableStateOf(false) }
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) vm.exportar(uri) { ok ->
-            Toast.makeText(context, if (ok) "Personaje exportado" else "No se pudo exportar", Toast.LENGTH_SHORT).show()
-        }
+    val exportar = rememberGuardarArchivo("application/json") { archivo ->
+        vm.exportar(archivo) { ok -> aviso(if (ok) "Personaje exportado" else "No se pudo exportar") }
     }
     val pestanas = Pestana.entries.filter { it != Pestana.MAGIA || ui?.muestraMagia == true }
     val pager = rememberPagerState { pestanas.size }
@@ -91,7 +87,7 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) 
                     MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
                         DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = {
                             menu = false
-                            exportLauncher.launch("${ui?.personaje?.nombre ?: "personaje"}.cronicas.json")
+                            exportar("${ui?.personaje?.nombre ?: "personaje"}.cronicas.json")
                         })
                         DropdownMenuItem(text = { Text("Eliminar", style = Tipos.ui, color = c.sangre) }, onClick = {
                             menu = false
