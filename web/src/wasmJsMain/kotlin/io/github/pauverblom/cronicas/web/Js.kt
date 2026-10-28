@@ -50,8 +50,15 @@ fun aBase64(bytes: ByteArray): String = Base64.encode(bytes)
 @OptIn(ExperimentalEncodingApi::class)
 fun deBase64(texto: String): ByteArray = Base64.decode(texto)
 
-/** Un archivo elegido con el selector del navegador, o null si se cancela. JSON {"nombre", "mime", "base64"}. */
-suspend fun elegirArchivo(accept: String): String? = jsElegirArchivo(accept).await<JsString?>()?.toString()
+/**
+ * Abre ya el selector de archivos del navegador (hay que llamarlo dentro del toque del usuario: Safari no lo abre
+ * desde código asíncrono) y devuelve una función que espera el archivo elegido, o null si se cancela.
+ * El archivo llega como JSON {"nombre", "mime", "base64"}.
+ */
+fun elegirArchivo(accept: String): suspend () -> String? {
+    val promesa = jsElegirArchivo(accept)
+    return { promesa.await<JsString?>()?.toString() }
+}
 
 /** JSON {"base64", "color"} del retrato recortado, o null si no es una imagen. */
 suspend fun procesarRetrato(base64: String): String? = jsProcesarRetrato(base64).await<JsString?>()?.toString()

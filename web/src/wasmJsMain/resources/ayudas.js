@@ -80,4 +80,6 @@ window.cronicasFechaHora = function (ms) {
 window.cronicasListo = function () {
     var c = document.getElementById("carga");
     if (c) c.remove();
+    // Las fichas viven en localStorage: se pide que el navegador no lo borre por falta de espacio
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
 };

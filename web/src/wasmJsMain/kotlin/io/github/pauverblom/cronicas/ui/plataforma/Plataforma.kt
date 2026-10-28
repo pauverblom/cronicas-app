@@ -83,8 +83,9 @@ fun rememberAbrirArchivo(tipos: Array<String>, onElegido: (Archivo) -> Unit): ()
     val scope = rememberCoroutineScope()
     val accept = if ("*/*" in tipos) "" else tipos.joinToString(",")
     return {
+        val esperar = elegirArchivo(accept)
         scope.launch {
-            val elegido = elegirArchivo(accept) ?: return@launch
+            val elegido = esperar() ?: return@launch
             val a = json.decodeFromString(ArchivoJs.serializer(), elegido)
             onElegido(Archivo(a.nombre, deBase64(a.base64), a.mime))
         }

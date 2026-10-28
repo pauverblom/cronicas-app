@@ -218,7 +218,7 @@ fun PlacaTitulo(titulo: String, modifier: Modifier = Modifier) {
             .semantics { heading() },
         contentAlignment = Alignment.Center
     ) {
-        Text(titulo.uppercase(), style = Tipos.encabezado.copy(fontSize = 14.sp, letterSpacing = 0.16.em), color = c.oro, maxLines = 1)
+        Text(titulo.uppercase(), style = Tipos.encabezado.copy(fontSize = 14.sp, letterSpacing = 0.16.em), color = c.oro, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -319,12 +319,13 @@ fun Dialogo(
 ) {
     val c = Marca.colores
     // La ventana del diálogo ocupa la pantalla y se aparta del teclado: el cuerpo se desplaza y los botones
-    // quedan siempre a la vista. Tocar fuera de la tarjeta lo cierra, como en un diálogo normal.
+    // quedan siempre a la vista. Tocar fuera de la tarjeta lo cierra, como en un diálogo normal (solo al tocar:
+    // un clickable también respondería a la barra espaciadora que sube desde los campos de texto con teclado físico).
     Dialog(onDismissRequest = onDismiss, properties = propiedadesDialogo()) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clickable(remember { MutableInteractionSource() }, null, onClick = onDismiss)
+                .pointerInput(onDismiss) { detectTapGestures { onDismiss() } }
                 .systemBarsPadding()
                 .imePadding()
                 .padding(horizontal = 16.dp, vertical = 28.dp),

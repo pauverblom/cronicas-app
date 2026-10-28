@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -277,9 +276,11 @@ private fun CabeceraCampana(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        PlacaTitulo(titulo, Modifier.weight(1f, fill = false))
-        Text("$cuantos", style = Tipos.uiSm, color = c.tintaSuave)
-        Spacer(Modifier.weight(1f))
+        // El título se lleva todo el espacio libre que necesite; los botones quedan a la derecha
+        Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PlacaTitulo(titulo, Modifier.weight(1f, fill = false))
+            Text("$cuantos", style = Tipos.uiSm, color = c.tintaSuave)
+        }
         if (onPlegar != null) {
             Icon(
                 if (plegada) Icons.Sharp.ExpandMore else Icons.Sharp.ExpandLess,

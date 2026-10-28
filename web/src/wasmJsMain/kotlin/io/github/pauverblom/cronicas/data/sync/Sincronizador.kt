@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -76,7 +77,9 @@ class Sincronizador(private val almacen: Almacen, val disponible: Boolean, priva
                 retratoVisto[pid] = retratoLocal(pid).second
                 escuchar(pid, codigo)
             }
-            almacen.fichas.debounce(400).collect {
+            // Solo cambios a partir de ahora (como el observador de Room en Android): al abrir la página no se sube
+            // nada hasta que haya un cambio, para no pisar lo que otros dispositivos cambiaron mientras tanto
+            almacen.fichas.drop(1).debounce(400).collect {
                 mutex.withLock { _vinculos.value.forEach { (pid, codigo) -> subir(pid, codigo) } }
             }
         }

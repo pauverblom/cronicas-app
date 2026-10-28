@@ -108,7 +108,8 @@ Pull requests and pushes to `main` run `.github/workflows/ci.yml`, which runs th
 
 The same app runs in the browser at **https://pauverblom.github.io/cronicas-app/**, built with Compose
 Multiplatform for Kotlin/Wasm. It needs a recent browser (Safari 18.2+ on iOS, Chrome/Edge 119+, Firefox 120+).
-On an iPhone, open it in Safari and use *Share → Add to Home Screen* to get it as an app.
+On an iPhone, open it in Safari and use *Share → Add to Home Screen*, then always open it from that icon: Safari
+deletes the data of websites you haven't visited for 7 days, but not of apps added to the Home Screen.
 
 It shares the code of the Android app: the `web/` module compiles the rules, the data model and every screen straight
 from `app/src/main/java` (the list is in `web/build.gradle.kts`). Only the Android-specific pieces have web
@@ -122,6 +123,7 @@ Differences from Android:
 - Characters live in that browser's storage. Clearing site data deletes them, so sync or export the ones you care about.
 - Portraits are center-cropped automatically (there is no crop screen); camera and gallery are the browser's image picker.
 - The browser's back button doesn't move between screens; use the app's own back arrows.
+- The *Material You* theme isn't available (it needs Android 12's wallpaper colors).
 
 ```bash
 ./gradlew :web:wasmJsBrowserDevelopmentRun    # dev server with the app
