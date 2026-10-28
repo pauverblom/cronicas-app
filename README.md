@@ -19,6 +19,8 @@ table; the app keeps the sheet and fills in everything the rules derive.
   coins); containers with capacity; mounts and companions that carry load; load bands and their penalties.
 - **Magia:** spell slots from the class tables plus bonus spells; known and prepared spells with "used" checkboxes and
   a rest button; catalog of the 371 rulebook spells for Clérigo, Druida, Ilusionista and Mago, CSV import and custom spells.
+- **Campaigns:** group characters on the home screen (long-press a card → *Mover a campaña…*). Sections can be
+  collapsed, renamed or dissolved. Campaigns are local to each device and are not synced or exported.
 - **Sync between devices:** a character can be synced through Firebase (long-press its card → *Sincronizar*). The
   app shows a code; enter it on another device with *Vincular personaje* and both keep the same sheet, live, last
   change wins. Works offline and catches up when back online. See [Character sync](#character-sync).

@@ -10,15 +10,23 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.sharp.ExpandLess
+import androidx.compose.material.icons.sharp.ExpandMore
 import androidx.compose.material.icons.sharp.FileOpen
+import androidx.compose.material.icons.sharp.MoreVert
 import androidx.compose.material.icons.sharp.Settings
 import androidx.compose.material.icons.sharp.Sync
 import io.github.pauverblom.cronicas.ui.hud.MenuHud
@@ -43,6 +51,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.pauverblom.cronicas.CronicasApp
 import io.github.pauverblom.cronicas.data.Backup
+import io.github.pauverblom.cronicas.data.Campana
+import io.github.pauverblom.cronicas.data.DatosCampanas
 import io.github.pauverblom.cronicas.data.Personaje
 import io.github.pauverblom.cronicas.data.ResumenPersonaje
 import io.github.pauverblom.cronicas.data.sync.Sincronizador
@@ -61,6 +71,8 @@ import io.github.pauverblom.cronicas.ui.hud.Dialogo
 import io.github.pauverblom.cronicas.ui.hud.EntradaLista
 import io.github.pauverblom.cronicas.ui.hud.EstadoVacio
 import io.github.pauverblom.cronicas.ui.hud.Glifo
+import io.github.pauverblom.cronicas.ui.hud.Opcion
+import io.github.pauverblom.cronicas.ui.hud.PlacaTitulo
 import io.github.pauverblom.cronicas.ui.hud.TituloPantalla
 import io.github.pauverblom.cronicas.ui.hud.Variante
 import io.github.pauverblom.cronicas.ui.theme.Marca
@@ -76,6 +88,7 @@ import java.io.File
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val repo = (app as CronicasApp).repository
     private val sync = (app as CronicasApp).sincronizador
+    private val campanasRepo = (app as CronicasApp).campanas
 
     val syncDisponible = sync.disponible
     val vinculos = sync.vinculos
@@ -83,7 +96,19 @@ class HomeViewModel(app: Application) : AndroidViewModel(app) {
     val personajes = repo.resumenes().map<List<ResumenPersonaje>, List<ResumenPersonaje>?> { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    fun eliminar(p: Personaje) = viewModelScope.launch { repo.deletePersonaje(p) }
+    val campanas = campanasRepo.datos.map<DatosCampanas, DatosCampanas?> { it }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    fun eliminar(p: Personaje) = viewModelScope.launch {
+        repo.deletePersonaje(p)
+        campanasRepo.editar { it.mover(p.id, null) }
+    }
+
+    fun moverACampana(pid: Long, campanaId: Long?) = viewModelScope.launch { campanasRepo.editar { it.mover(pid, campanaId) } }
+    fun crearCampana(pid: Long, nombre: String) = viewModelScope.launch { campanasRepo.editar { it.crearYMover(pid, nombre) } }
+    fun renombrarCampana(id: Long, nombre: String) = viewModelScope.launch { campanasRepo.editar { it.renombrar(id, nombre) } }
+    fun disolverCampana(id: Long) = viewModelScope.launch { campanasRepo.editar { it.disolver(id) } }
+    fun plegarCampana(id: Long, plegada: Boolean) = viewModelScope.launch { campanasRepo.editar { it.plegar(id, plegada) } }
 
     fun exportar(pid: Long, uri: Uri, onFin: (Boolean) -> Unit) = viewModelScope.launch {
         val ok = runCatching {
@@ -127,11 +152,15 @@ fun HomeScreen(
 ) {
     val personajes by vm.personajes.collectAsState()
     val vinculos by vm.vinculos.collectAsState()
+    val campanas by vm.campanas.collectAsState()
     val context = LocalContext.current
     var exportando by remember { mutableStateOf<Personaje?>(null) }
     var borrando by remember { mutableStateOf<Personaje?>(null) }
     var sincronizando by remember { mutableStateOf<Personaje?>(null) }
     var vinculando by remember { mutableStateOf(false) }
+    var moviendo by remember { mutableStateOf<Personaje?>(null) }
+    var renombrando by remember { mutableStateOf<Campana?>(null) }
+    var disolviendo by remember { mutableStateOf<Campana?>(null) }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         val p = exportando ?: return@rememberLauncherForActivityResult
@@ -158,8 +187,9 @@ fun HomeScreen(
             }
         ) { TituloPantalla("Crónicas de la Marca") }
         val lista = personajes
+        val datos = campanas
         when {
-            lista == null -> Cargando()
+            lista == null || datos == null -> Cargando()
             lista.isEmpty() -> SinPersonajes(onNuevo, importar, if (vm.syncDisponible) ({ vinculando = true }) else null)
             else -> {
                 Boton(
@@ -174,17 +204,35 @@ fun HomeScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(lista, key = { it.personaje.id }) { r ->
-                        FilaPersonaje(
-                            r,
-                            onClick = { onAbrir(r.personaje.id) },
-                            onExportar = {
-                                exportando = r.personaje
-                                exportLauncher.launch("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
-                            },
-                            onEliminar = { borrando = r.personaje },
-                            onSincronizar = if (vm.syncDisponible) ({ sincronizando = r.personaje }) else null
-                        )
+                    val grupos = agrupar(lista, datos)
+                    val conCabeceras = grupos.any { it.campana != null }
+                    for (g in grupos) {
+                        val plegada = g.campana != null && g.campana.id in datos.plegadas
+                        if (conCabeceras) {
+                            item(key = "campana_${g.campana?.id ?: 0}", span = { GridItemSpan(maxLineSpan) }) {
+                                CabeceraCampana(
+                                    titulo = g.campana?.nombre ?: "Sin campaña",
+                                    cuantos = g.personajes.size,
+                                    plegada = plegada,
+                                    onPlegar = g.campana?.let { c -> { vm.plegarCampana(c.id, !plegada) } },
+                                    onRenombrar = g.campana?.let { c -> { renombrando = c } },
+                                    onDisolver = g.campana?.let { c -> { disolviendo = c } }
+                                )
+                            }
+                        }
+                        if (!plegada) items(g.personajes, key = { it.personaje.id }) { r ->
+                            FilaPersonaje(
+                                r,
+                                onClick = { onAbrir(r.personaje.id) },
+                                onExportar = {
+                                    exportando = r.personaje
+                                    exportLauncher.launch("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
+                                },
+                                onEliminar = { borrando = r.personaje },
+                                onSincronizar = if (vm.syncDisponible) ({ sincronizando = r.personaje }) else null,
+                                onMover = { moviendo = r.personaje }
+                            )
+                        }
                     }
                     item { Box(Modifier.navigationBarsPadding()) }
                 }
@@ -203,6 +251,33 @@ fun HomeScreen(
             },
             onDismiss = { borrando = null },
             onConfirm = { vm.eliminar(p) }
+        )
+    }
+
+    moviendo?.let { p ->
+        val actuales = personajes.orEmpty()
+        val datos = campanas ?: DatosCampanas()
+        MoverCampanaDialog(
+            personaje = p,
+            actual = datos.campanaDe(p.id),
+            campanas = agrupar(actuales, datos).mapNotNull { it.campana },
+            onElegir = { vm.moverACampana(p.id, it) },
+            onCrear = { vm.crearCampana(p.id, it) },
+            onDismiss = { moviendo = null }
+        )
+    }
+
+    renombrando?.let { c ->
+        RenombrarCampanaDialog(c, onGuardar = { vm.renombrarCampana(c.id, it) }, onDismiss = { renombrando = null })
+    }
+
+    disolviendo?.let { c ->
+        ConfirmarDialog(
+            titulo = "Disolver campaña",
+            texto = "Los personajes de «${c.nombre}» quedarán sin campaña. No se borra ningún personaje.",
+            confirmar = "Disolver",
+            onDismiss = { disolviendo = null },
+            onConfirm = { vm.disolverCampana(c.id) }
         )
     }
 
@@ -242,6 +317,99 @@ fun HomeScreen(
             },
             onDismiss = { vinculando = false }
         )
+    }
+}
+
+/** Personajes de una campaña, o los que no tienen ([campana] null). */
+private data class Grupo(val campana: Campana?, val personajes: List<ResumenPersonaje>)
+
+/** Una sección por campaña con personajes, en orden de creación, y al final los que no tienen campaña. */
+private fun agrupar(lista: List<ResumenPersonaje>, datos: DatosCampanas): List<Grupo> {
+    val porCampana = lista.groupBy { datos.campanaDe(it.personaje.id) }
+    val conCampana = datos.campanas.mapNotNull { c -> porCampana[c]?.let { Grupo(c, it) } }
+    val sinCampana = porCampana[null].orEmpty()
+    return if (conCampana.isEmpty()) listOf(Grupo(null, lista))
+    else conCampana + listOfNotNull(sinCampana.takeIf { it.isNotEmpty() }?.let { Grupo(null, it) })
+}
+
+/** Cabecera de sección: nombre y número de personajes; se pliega al tocarla. «Sin campaña» no se pliega ni tiene menú. */
+@Composable
+private fun CabeceraCampana(
+    titulo: String,
+    cuantos: Int,
+    plegada: Boolean,
+    onPlegar: (() -> Unit)?,
+    onRenombrar: (() -> Unit)?,
+    onDisolver: (() -> Unit)?
+) {
+    val c = Marca.colores
+    var menu by remember { mutableStateOf(false) }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .then(if (onPlegar != null) Modifier.clickable(onClick = onPlegar) else Modifier)
+            .padding(top = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        PlacaTitulo(titulo, Modifier.weight(1f, fill = false))
+        Text("$cuantos", style = Tipos.uiSm, color = c.tintaSuave)
+        Spacer(Modifier.weight(1f))
+        if (onPlegar != null) {
+            Icon(
+                if (plegada) Icons.Sharp.ExpandMore else Icons.Sharp.ExpandLess,
+                contentDescription = if (plegada) "Desplegar" else "Plegar",
+                tint = c.oro
+            )
+        }
+        if (onRenombrar != null && onDisolver != null) {
+            Box {
+                BotonIcono({ menu = true }, "Opciones de la campaña") { Icon(Icons.Sharp.MoreVert, null, Modifier.size(22.dp)) }
+                MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text("Renombrar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onRenombrar() })
+                    DropdownMenuItem(text = { Text("Disolver", style = Tipos.ui, color = c.sangre) }, onClick = { menu = false; onDisolver() })
+                }
+            }
+        }
+    }
+}
+
+/** Elige la campaña de un personaje, o crea una nueva para él. */
+@Composable
+private fun MoverCampanaDialog(
+    personaje: Personaje,
+    actual: Campana?,
+    campanas: List<Campana>,
+    onElegir: (Long?) -> Unit,
+    onCrear: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var nueva by remember { mutableStateOf("") }
+    FormularioDialog(
+        titulo = "Campaña de ${personaje.nombre}",
+        onDismiss = onDismiss,
+        guardar = "Crear",
+        guardarActivo = nueva.isNotBlank(),
+        onGuardar = { onCrear(nueva); onDismiss() }
+    ) {
+        for (c in campanas) {
+            Opcion(actual?.id == c.id, { onElegir(c.id); onDismiss() }) { Text(c.nombre, style = Tipos.ui) }
+        }
+        Opcion(actual == null, { onElegir(null); onDismiss() }) { Text("Sin campaña", style = Tipos.ui) }
+        Campo(nueva, { nueva = it }, "Nueva campaña", marcador = "Nombre de la campaña")
+    }
+}
+
+@Composable
+private fun RenombrarCampanaDialog(campana: Campana, onGuardar: (String) -> Unit, onDismiss: () -> Unit) {
+    var nombre by remember { mutableStateOf(campana.nombre) }
+    FormularioDialog(
+        titulo = "Renombrar campaña",
+        onDismiss = onDismiss,
+        guardarActivo = nombre.isNotBlank(),
+        onGuardar = { onGuardar(nombre); onDismiss() }
+    ) {
+        Campo(nombre, { nombre = it }, "Nombre", enfocarAlAbrir = true)
     }
 }
 
@@ -351,7 +519,8 @@ private fun FilaPersonaje(
     onClick: () -> Unit,
     onExportar: () -> Unit,
     onEliminar: () -> Unit,
-    onSincronizar: (() -> Unit)?
+    onSincronizar: (() -> Unit)?,
+    onMover: () -> Unit
 ) {
     val p = r.personaje
     var menu by remember { mutableStateOf(false) }
@@ -375,6 +544,7 @@ private fun FilaPersonaje(
             if (onSincronizar != null) {
                 DropdownMenuItem(text = { Text("Sincronizar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onSincronizar() })
             }
+            DropdownMenuItem(text = { Text("Mover a campaña…", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onMover() })
             DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onExportar() })
             DropdownMenuItem(text = { Text("Eliminar", style = Tipos.ui, color = c.sangre) }, onClick = { menu = false; onEliminar() })
         }

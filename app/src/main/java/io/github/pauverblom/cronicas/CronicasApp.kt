@@ -3,6 +3,7 @@ package io.github.pauverblom.cronicas
 import android.app.Application
 import io.github.pauverblom.cronicas.data.AjustesRepository
 import io.github.pauverblom.cronicas.data.AppDatabase
+import io.github.pauverblom.cronicas.data.CampanasRepository
 import io.github.pauverblom.cronicas.data.Repository
 import io.github.pauverblom.cronicas.data.SeedData
 import io.github.pauverblom.cronicas.data.sync.Sincronizador
@@ -27,6 +28,9 @@ class CronicasApp : Application() {
     lateinit var sincronizador: Sincronizador
         private set
 
+    lateinit var campanas: CampanasRepository
+        private set
+
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
@@ -34,6 +38,7 @@ class CronicasApp : Application() {
         database = AppDatabase.getInstance(this)
         repository = Repository(database)
         ajustes = AjustesRepository(this)
+        campanas = CampanasRepository(this)
         Ilustraciones.cargar(assets)
         sincronizador = Sincronizador(this, repository, Retratos.directorio(this))
         sincronizador.iniciar()
