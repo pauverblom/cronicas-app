@@ -149,25 +149,30 @@ Deleting a synced character only removes it from that device; the cloud copy and
 
 ### Setting up Firebase (once)
 
-1. Create a project at [console.firebase.google.com](https://console.firebase.google.com) (the free Spark plan is enough).
-2. *Add app → Android*, package name `io.github.pauverblom.cronicas`. Download `google-services.json`.
-3. *Build → Authentication → Get started → Sign-in method*: enable **Anonymous**.
-4. *Build → Firestore Database → Create database* (production mode, any location), then *Rules*: paste
-   [`firestore.rules`](firestore.rules) and *Publish*.
+1. Create a project at [console.firebase.google.com](https://console.firebase.google.com). The free Spark plan is
+   enough (Analytics isn't needed). Don't set up Cloud Storage: it needs the paid plan, and the app doesn't use it.
+2. *Project Overview → Add app → Android*, package name `io.github.pauverblom.cronicas` (no SHA-1 needed).
+   Download `google-services.json` and skip the SDK steps (the project already has them).
+3. *Security → Authentication → Get started → Sign-in method*: enable **Anonymous**.
+4. *Databases & Storage → Firestore → Create database*: **Standard** edition, database ID **`(default)`** (the apps use
+   the default database), any location (e.g. `europe-southwest1`, Madrid), **production mode**. Then on its *Rules*
+   tab paste [`firestore.rules`](firestore.rules) and *Publish*.
 5. Store the config as a repository secret (it is not committed):
 
    ```bash
    gh secret set GOOGLE_SERVICES_JSON -R pauverblom/cronicas-app < google-services.json
    ```
 
-6. For the web version: *Project settings → General → Your apps → Add app → Web* (no hosting needed), copy the
-   `firebaseConfig` object it shows, and store it as a secret too (JSON or the JS snippet both work):
+6. For the web version: *Project Overview → Add app → Web* (no Firebase Hosting), copy the `firebaseConfig = { ... }`
+   it shows (later: *Project settings → General → Your apps*), and store it as the `FIREBASE_WEB_CONFIG` secret, either
+   on GitHub (*Settings → Secrets and variables → Actions → New repository secret*) or from a file (the JSON or the
+   JS snippet both work; `gh secret set` without `<` keeps only the first pasted line):
 
    ```bash
-   gh secret set FIREBASE_WEB_CONFIG -R pauverblom/cronicas-app    # paste it, then Ctrl-D
+   gh secret set FIREBASE_WEB_CONFIG -R pauverblom/cronicas-app < firebase-web-config.txt
    ```
 
-   Then add `pauverblom.github.io` under *Authentication → Settings → Authorized domains*.
+   Then add `pauverblom.github.io` under *Security → Authentication → Settings → Authorized domains*.
 
 The release workflow writes the secret to `app/src/release/google-services.json`. Builds without it (debug builds,
 pull requests, forks) compile normally and simply don't show the sync options. To try sync in a local debug build,
