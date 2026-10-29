@@ -32,12 +32,8 @@ object RutaWizard
 @Serializable
 object RutaAjustes
 
-/**
- * La ficha de [personajeId]. Nombre, retrato y clase llegan ya desde la lista para pintar la cabecera desde el
- * primer fotograma, mientras se carga la ficha: así el retrato tiene adónde volar en la transición.
- */
 @Serializable
-data class RutaHoja(val personajeId: Long, val nombre: String = "", val foto: String? = null, val claseId: String? = null)
+data class RutaHoja(val personajeId: Long)
 
 /** Igual que en Android, pero creando los ViewModels a mano (en la web no hay fábrica por reflexión). */
 @OptIn(ExperimentalSharedTransitionApi::class)
@@ -58,7 +54,6 @@ fun AppNavigation(app: CronicasApp, ajustes: AjustesApp) {
                 ConTransicion(this@SharedTransitionLayout, this) {
                     HomeScreen(
                         onAbrir = { nav.navigate(RutaHoja(it)) },
-                    onAbrirFicha = { p -> nav.navigate(RutaHoja(p.id, p.nombre, p.fotoPath, p.claseId)) },
                         onNuevo = { nav.navigate(RutaWizard) },
                         onAjustes = { nav.navigate(RutaAjustes) },
                         ajustes = ajustes,

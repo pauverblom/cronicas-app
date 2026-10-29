@@ -1,5 +1,13 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import kotlinx.coroutines.flow.first
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -79,4 +87,20 @@ object Pantallas {
     fun cerrar(anima: Boolean): ExitTransition =
         if (!anima) ExitTransition.None
         else fadeOut(tween(DURACION - 120)) + scaleOut(tween(DURACION, easing = FastOutSlowInEasing), targetScale = 0.94f)
+}
+
+/**
+ * Falso mientras la pantalla está entrando con su animación, verdadero cuando ha terminado (o si no hay). Para
+ * construir lo pesado después: componer una pantalla grande en mitad de la animación la congela.
+ */
+@Composable
+fun rememberEntradaTerminada(): Boolean {
+    val t = LocalTransicion.current ?: return true
+    val transicion = t.visibilidad.transition
+    var terminada by remember { mutableStateOf(false) }
+    LaunchedEffect(transicion) {
+        snapshotFlow { transicion.currentState == EnterExitState.Visible && transicion.targetState == EnterExitState.Visible }.first { it }
+        terminada = true
+    }
+    return terminada
 }

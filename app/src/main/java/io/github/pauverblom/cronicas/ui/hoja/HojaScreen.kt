@@ -1,5 +1,14 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import io.github.pauverblom.cronicas.ui.hud.rememberEntradaTerminada
+import io.github.pauverblom.cronicas.ui.common.animacionesActivas
+import kotlinx.coroutines.delay
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.MutableTransitionState
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.AnimatedVisibility
 import io.github.pauverblom.cronicas.ui.hud.textoCompartido
 import io.github.pauverblom.cronicas.ui.hud.compartido
 import androidx.compose.runtime.LaunchedEffect
@@ -67,7 +76,8 @@ fun HojaScreen(ajustes: AjustesApp, onVolver: () -> Unit, vm: HojaViewModel = vi
     var previa by remember { mutableStateOf<Personaje?>(null) }
     // Al guardarse el tema, la ficha ya trae el nuevo: se deja de probar (sin parpadeo entre medias)
     LaunchedEffect(ui?.personaje) { previa = null }
-    CronicasMarcaTheme(ajustes.paraPersonaje(previa ?: ui?.personaje)) {
+    // Antes de cargar, el tema del personaje tal como venía de la lista: así la ficha no cambia de color al cargarse
+    CronicasMarcaTheme(ajustes.paraPersonaje(previa ?: ui?.personaje ?: vm.previa)) {
         Noche { HojaContenido(ui, vm, ajustes, onPrevia = { previa = it }, onVolver) }
     }
 }
@@ -111,8 +121,8 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, ajustes: AjustesApp, o
                 }
             }
         ) {
-            // Mientras se carga, la cabecera ya se pinta con lo que trae la ruta (el destino de la transición)
-            val p = ui?.personaje ?: vm.previa.takeIf { it.nombre.isNotEmpty() }
+            // Mientras se carga, la cabecera ya se pinta con el personaje de la lista (el destino de la transición)
+            val p = ui?.personaje ?: vm.previa
             if (p != null) {
                 RetratoAvatar(p.fotoPath, p.nombre, 52.dp, Modifier.compartido("retrato-${p.id}"), claseId = p.claseId)
                 Column(Modifier.weight(1f)) {
@@ -134,35 +144,53 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, ajustes: AjustesApp, o
                 }
             }
         }
+        // Las pestañas y su contenido se construyen al terminar la animación de entrada, y aparecen fundiéndose:
+        // construirlos en mitad de la animación la congelaría
+        val entrada = rememberEntradaTerminada()
+        if (!entrada) return@Column
         if (ui == null) {
             Cargando()
             return@Column
         }
-        PestanasHoja(
-            pestanas.map { it.titulo },
-            pager.currentPage.coerceAtMost(pestanas.lastIndex),
-            onElegir = { i -> scope.launch { pager.animateScrollToPage(i) } }
-        )
-        Box(Modifier.weight(1f)) {
-        HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = 1) { page ->
-            // Las pestañas vecinas siguen compuestas para deslizar sin esperas, pero con sus animaciones quietas
-            CompositionLocalProvider(LocalAnimacionesVisibles provides (page == pager.settledPage)) {
-                when (pestanas[page]) {
-                    Pestana.RESUMEN -> ResumenTab(ui, vm)
-                    Pestana.PERSONAJE -> PersonajeTab(ui, vm)
-                    Pestana.EQUIPO -> EquipoTab(ui, vm)
-                    Pestana.MAGIA -> MagiaTab(ui, vm)
-                    Pestana.NOTAS -> NotasTab(ui, vm)
+        // La pestaña vecina se compone un momento después, en reposo, no a la vez que la primera
+        var vecinas by remember { mutableIntStateOf(0) }
+        LaunchedEffect(Unit) {
+            delay(600)
+            vecinas = 1
+        }
+        AnimatedVisibility(
+            remember { MutableTransitionState(false) }.apply { targetState = true },
+            Modifier.weight(1f),
+            enter = if (animacionesActivas()) fadeIn(tween(220)) else EnterTransition.None
+        ) {
+            Column(Modifier.fillMaxSize()) {
+                PestanasHoja(
+                    pestanas.map { it.titulo },
+                    pager.currentPage.coerceAtMost(pestanas.lastIndex),
+                    onElegir = { i -> scope.launch { pager.animateScrollToPage(i) } }
+                )
+                Box(Modifier.weight(1f)) {
+                    HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = vecinas) { page ->
+                        // Las pestañas vecinas siguen compuestas para deslizar sin esperas, pero con sus animaciones quietas
+                        CompositionLocalProvider(LocalAnimacionesVisibles provides (page == pager.settledPage)) {
+                            when (pestanas[page]) {
+                                Pestana.RESUMEN -> ResumenTab(ui, vm)
+                                Pestana.PERSONAJE -> PersonajeTab(ui, vm)
+                                Pestana.EQUIPO -> EquipoTab(ui, vm)
+                                Pestana.MAGIA -> MagiaTab(ui, vm)
+                                Pestana.NOTAS -> NotasTab(ui, vm)
+                            }
+                        }
+                    }
+                    // Sombra bajo el raíl: lo que sube se funde con la noche al pasar por debajo de las pestañas
+                    Spacer(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(28.dp)
+                            .background(Brush.verticalGradient(0f to c.noche, 0.35f to c.noche.copy(alpha = 0.75f), 1f to c.noche.copy(alpha = 0f)))
+                    )
                 }
             }
-        }
-            // Sombra bajo el raíl: lo que sube se funde con la noche al pasar por debajo de las pestañas
-            Spacer(
-                Modifier
-                    .fillMaxWidth()
-                    .height(28.dp)
-                    .background(Brush.verticalGradient(0f to c.noche, 0.35f to c.noche.copy(alpha = 0.75f), 1f to c.noche.copy(alpha = 0f)))
-            )
         }
     }
 

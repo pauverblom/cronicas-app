@@ -1,4 +1,12 @@
 import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
@@ -48,7 +56,18 @@ fun main() {
             }
             val ajustes by app.ajustes.ajustes.collectAsState(initial = app.ajustes.actuales)
             CronicasMarcaTheme(ajustes) {
-                Noche { AppNavigation(app, ajustes) }
+                // La app aparece fundiéndose y creciendo un poco. Además deja preparado en la GPU lo que necesitan las
+                // capas translúcidas y escaladas, que si no se prepararía al abrir la primera ficha, en plena transición
+                val aparicion = remember { Animatable(0f) }
+                LaunchedEffect(Unit) { aparicion.animateTo(1f, tween(350)) }
+                Box(Modifier.fillMaxSize().graphicsLayer {
+                    alpha = aparicion.value
+                    val e = 0.97f + 0.03f * aparicion.value
+                    scaleX = e
+                    scaleY = e
+                }) {
+                    Noche { AppNavigation(app, ajustes) }
+                }
             }
             AvisoHost()
         }

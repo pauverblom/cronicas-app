@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.home
 
+import io.github.pauverblom.cronicas.ui.hoja.VistaPrevia
 import io.github.pauverblom.cronicas.ui.theme.CronicasMarcaTheme
 import io.github.pauverblom.cronicas.data.AjustesApp
 import androidx.compose.ui.unit.Dp
@@ -79,8 +80,6 @@ fun HomeScreen(
     onAbrir: (Long) -> Unit,
     onNuevo: () -> Unit,
     onAjustes: () -> Unit,
-    /** Abrir la ficha de un personaje de la lista (con lo que hace falta para la transición). */
-    onAbrirFicha: (Personaje) -> Unit = { onAbrir(it.id) },
     ajustes: AjustesApp = AjustesApp(),
     vm: HomeViewModel = viewModel()
 ) {
@@ -169,7 +168,10 @@ fun HomeScreen(
                             CronicasMarcaTheme(ajustes.paraPersonaje(r.personaje)) {
                                 FilaPersonaje(
                                     r,
-                                    onClick = { onAbrirFicha(r.personaje) },
+                                    onClick = {
+                                        VistaPrevia.poner(r.personaje)
+                                        onAbrir(r.personaje.id)
+                                    },
                                     onExportar = {
                                         exportando = r.personaje
                                         exportar("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")

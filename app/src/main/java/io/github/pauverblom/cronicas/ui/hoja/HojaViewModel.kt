@@ -1,5 +1,7 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.Dispatchers
 import io.github.pauverblom.cronicas.data.Tema
 import io.github.pauverblom.cronicas.data.ColoresTema
 import io.github.pauverblom.cronicas.data.conRetrato
@@ -45,10 +47,9 @@ private data class Magia(val cj: List<ConjuroConDetalle>, val esp: List<EspacioO
 
 class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidViewModel(app) {
     private val repo = (app as CronicasApp).repository
-    private val ruta = savedState.toRoute<RutaHoja>()
-    val pid: Long = ruta.personajeId
-    /** Nombre, retrato y clase que trae la ruta, para la cabecera mientras se carga la ficha. */
-    val previa = Personaje(id = pid, nombre = ruta.nombre, fotoPath = ruta.foto).let { p -> ruta.claseId?.let { p.copy(claseId = it) } ?: p }
+    val pid: Long = savedState.toRoute<RutaHoja>().personajeId
+    /** El personaje tal como estaba en la lista, para pintar la ficha mientras se carga (ver [VistaPrevia]). */
+    val previa: Personaje? = VistaPrevia.de(pid)
 
     private val base: Flow<Base> = combine(
         repo.personaje(pid), repo.caracteristicas(pid), repo.estado(pid), repo.objetos(pid), repo.tesoro(pid), ::Base
@@ -66,7 +67,10 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
             p, c, e, b.o, t, x.h.filter { !it.oculta }, x.cond, x.comp, m.cj, m.esp, m.notas,
             Hoja.calcular(p, c, e, b.o, t, x.comp, m.esp)
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+    }
+        // El cálculo de la ficha (reglas, cifras) fuera del hilo de la interfaz: no frena las animaciones
+        .flowOn(Dispatchers.Default)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
     val catalogoConjuros = repo.conjuros().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
