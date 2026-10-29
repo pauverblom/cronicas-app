@@ -111,6 +111,10 @@ fun esquemaDinamico(oscuro: Boolean): ColorScheme? {
 @Composable
 fun anchoVentanaDp(): Int = LocalConfiguration.current.screenWidthDp
 
+/** Color de la franja de la barra de estado (solo en la web; en Android lo hace MainActivity). */
+@Suppress("UNUSED_PARAMETER")
+fun pintarBarraSistema(argb: Int) {}
+
 /** Si un campo puede enfocarse solo al abrirse (y sacar el teclado) sin que se toque. */
 fun enfocarSinToqueDisponible(): Boolean = true
 

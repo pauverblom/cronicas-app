@@ -24,6 +24,9 @@ external fun jsFechaHora(ms: Double): String
 @JsFun("() => navigator.maxTouchPoints > 0 && window.matchMedia('(pointer: coarse)').matches")
 external fun jsTactil(): Boolean
 
+@JsFun("(argb) => window.cronicasPintarBarra(argb)")
+external fun jsPintarBarra(argb: Int)
+
 @JsFun("() => Date.now()")
 external fun jsAhora(): Double
 

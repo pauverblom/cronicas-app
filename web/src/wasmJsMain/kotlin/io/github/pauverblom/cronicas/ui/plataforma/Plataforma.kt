@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.plataforma
 
+import io.github.pauverblom.cronicas.web.jsPintarBarra
 import io.github.pauverblom.cronicas.web.jsTactil
 import android.app.Application
 import androidx.compose.foundation.layout.Box
@@ -129,6 +130,9 @@ fun anchoVentanaDp(): Int {
     val ancho = LocalWindowInfo.current.containerSize.width
     return with(LocalDensity.current) { ancho.toDp().value.toInt() }
 }
+
+/** La franja de arriba (bajo la barra de estado de iPhone/iPad) y el fondo de la página, del color de la noche. */
+fun pintarBarraSistema(argb: Int) = jsPintarBarra(argb)
 
 /**
  * En pantallas táctiles no: Safari (iPhone, iPad) solo saca el teclado si el foco llega dentro de un toque, y un

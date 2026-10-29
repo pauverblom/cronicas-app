@@ -108,3 +108,11 @@ window.cronicasListo = function () {
     // Las fichas viven en localStorage: se pide que el navegador no lo borre por falta de espacio
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(function () {});
 };
+
+/** Pinta la franja de arriba, el fondo de la página y el color del navegador con la noche del tema (ARGB). */
+window.cronicasPintarBarra = function (argb) {
+    var hex = "#" + ((argb >>> 0) & 0xffffff).toString(16).padStart(6, "0");
+    document.documentElement.style.setProperty("--noche", hex);
+    var meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute("content", hex);
+};

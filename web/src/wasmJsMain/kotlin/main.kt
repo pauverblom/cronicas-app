@@ -41,7 +41,8 @@ fun main() {
         )
         app.sincronizador.iniciar()
         jsListo()
-        ComposeViewport(document.body!!) {
+        // En #app, que deja libre la barra de estado y el indicador de inicio (ver index.html)
+        ComposeViewport(document.getElementById("app")!!) {
             setSingletonImageLoaderFactory { contexto ->
                 ImageLoader.Builder(contexto).components { add(KtorNetworkFetcherFactory()) }.build()
             }

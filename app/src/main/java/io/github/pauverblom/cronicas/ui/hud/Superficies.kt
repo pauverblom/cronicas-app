@@ -1,5 +1,9 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import androidx.compose.runtime.SideEffect
+import io.github.pauverblom.cronicas.ui.plataforma.pintarBarraSistema
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.runtime.DisposableEffect
 import io.github.pauverblom.cronicas.ui.plataforma.propiedadesDialogo
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -610,9 +614,36 @@ fun TituloPantalla(titulo: String, subtitulo: String? = null) {
 }
 
 /** Contenedor que pinta el fondo de la noche y deja el contenido encima. */
+/** Una [Noche] en pantalla con su color; la última de [capasNoche] es la más interior. */
+private class CapaNoche(var color: Int)
+
+private val capasNoche = mutableListOf<CapaNoche>()
+
+private fun pintarCima() {
+    capasNoche.lastOrNull()?.let { pintarBarraSistema(it.color) }
+}
+
 @Composable
 fun Noche(modifier: Modifier = Modifier, contenido: @Composable BoxScope.() -> Unit) {
     val c = Marca.colores
+    // En la web, la franja de la barra de estado sigue a la noche más interior en pantalla (la ficha puede tener
+    // su tema, dentro de la noche de toda la app); al salir de la ficha vuelve la de fuera
+    val argb = c.noche.toArgb()
+    val capa = remember { CapaNoche(argb) }
+    DisposableEffect(capa) {
+        capasNoche.add(capa)
+        pintarCima()
+        onDispose {
+            capasNoche.remove(capa)
+            pintarCima()
+        }
+    }
+    SideEffect {
+        if (capa.color != argb) {
+            capa.color = argb
+            pintarCima()
+        }
+    }
     Box(modifier.fillMaxSize()) {
         // La noche en su propia capa: se pinta una vez y no en cada fotograma al desplazar lo de encima
         Box(Modifier.matchParentSize().graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }.fondoNoche(c, estrellas = false))
