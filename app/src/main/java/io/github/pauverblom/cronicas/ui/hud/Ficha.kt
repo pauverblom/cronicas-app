@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.paddingFromBaseline
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
@@ -320,7 +321,7 @@ fun Insignia(
 ) {
     val c = Marca.colores
     val interaccion = remember { MutableInteractionSource() }
-    Column(
+    BoxWithConstraints(
         modifier
             .widthIn(max = 84.dp)
             .aspectRatio(84f / 108f)
@@ -331,10 +332,13 @@ fun Insignia(
                 interior(c, FormaInsignia, cristal(c), TipoTextura.PLACA, sombra = true)
                 ornamento(Orn.INSIGNIA, Pintura.Metal.brocha(c))
             }
-            .padding(top = 13.dp, start = 4.dp, end = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .padding(horizontal = 4.dp)
     ) {
-        Row(Modifier.height(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Unidades del marco (84 × 108): la etiqueta va encima del separador (y = 33) y la cifra centrada debajo.
+        // Se colocan por la línea base, no por la caja del texto, que cambia con las métricas de la fuente
+        // de cada plataforma
+        val u = maxHeight / 108f
+        Row(Modifier.align(Alignment.TopCenter).padding(top = u * 13).height(u * 16), verticalAlignment = Alignment.CenterVertically) {
             Text(etiqueta, style = Tipos.etiquetaCaps, color = c.oro, maxLines = 1)
             if (fijado) MarcaFijada(12.dp, Modifier.offset(y = 4.dp))
         }
@@ -348,9 +352,14 @@ fun Insignia(
             ),
             color = c.tinta,
             maxLines = 1,
-            modifier = Modifier.padding(top = 10.dp)
+            modifier = Modifier.align(Alignment.TopCenter).paddingFromBaseline(top = u * 69)
         )
-        if (sub != null) Text(sub, style = Tipos.caption.copy(fontSize = 11.sp, lineHeight = 14.sp), color = c.tintaSuave, maxLines = 1, textAlign = TextAlign.Center)
+        if (sub != null) {
+            Text(
+                sub, style = Tipos.caption.copy(fontSize = 11.sp, lineHeight = 14.sp), color = c.tintaSuave, maxLines = 1,
+                textAlign = TextAlign.Center, modifier = Modifier.align(Alignment.TopCenter).paddingFromBaseline(top = u * 85)
+            )
+        }
     }
 }
 
@@ -387,9 +396,15 @@ fun EscudoCaracteristica(
             }
     ) {
         Gema(ab, 10.dp, Modifier.align(Alignment.TopCenter).offset(y = (-4).dp))
-        Column(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        // Unidades del marco (96 × 120): el nombre arriba, el modificador y la puntuación centrados sobre la punta.
+        // La cifra y la puntuación se colocan por la línea base (ver Insignia)
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val u = maxWidth / 96f
             // El nombre entero («CONSTITUCIÓN»), encogido para caber en el escudo
-            Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            Row(
+                Modifier.align(Alignment.TopCenter).padding(top = u * 18).padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
                 TextoAjustado(
                     atributo.nombre.uppercase(), atributo.abrev,
                     Tipos.etiquetaCaps.copy(letterSpacing = 0.08.em), ab,
@@ -397,7 +412,7 @@ fun EscudoCaracteristica(
                 )
                 if (primaria) IconoGlifo(Glifo.ESTRELLA, tamano = 12.dp, color = c.oro, descripcion = "Primaria")
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.align(Alignment.TopCenter).paddingFromBaseline(top = u * 66), verticalAlignment = Alignment.CenterVertically) {
                 Text(conSigno(mod), style = Tipos.cifraLg.copy(fontSize = 32.sp, lineHeight = 38.sp, shadow = brillo(ab, 28f)), color = ab)
                 if (fijado) MarcaFijada(12.dp)
             }
@@ -407,7 +422,8 @@ fun EscudoCaracteristica(
                     if (base != null && base != puntuacion) withStyle(SpanStyle(fontFamily = AlegreyaSans, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = c.tintaSuave)) { append(" ($base)") }
                 },
                 style = TextStyle(fontFamily = Cinzel, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold),
-                color = c.tinta
+                color = c.tinta,
+                modifier = Modifier.align(Alignment.TopCenter).paddingFromBaseline(top = u * 89)
             )
         }
     }

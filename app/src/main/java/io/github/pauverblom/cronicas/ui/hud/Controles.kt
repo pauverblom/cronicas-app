@@ -42,6 +42,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.InputMode
+import androidx.compose.ui.platform.LocalInputModeManager
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.rotate
@@ -96,10 +98,13 @@ fun IconoGlifo(glifo: Glifo, modifier: Modifier = Modifier, tamano: Dp = 20.dp, 
 @Composable
 fun Modifier.foco(interaccion: MutableInteractionSource): Modifier {
     val enfocado by interaccion.collectIsFocusedAsState()
+    // Solo al moverse con el teclado: tocar o hacer clic también da el foco (en la web y con ratón), y ahí el
+    // recuadro sobra
+    val teclado = LocalInputModeManager.current.inputMode == InputMode.Keyboard
     val c = Marca.colores.foco
     return this.drawWithContent {
         drawContent()
-        if (enfocado) {
+        if (enfocado && teclado) {
             val m = 3.dp.toPx()
             drawRect(c, Offset(-m, -m), Size(size.width + 2 * m, size.height + 2 * m), style = Stroke(2.dp.toPx()))
         }
