@@ -1,5 +1,9 @@
 package io.github.pauverblom.cronicas.ui.plataforma
 
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import android.app.Application
 import android.net.Uri
 import android.os.Build
@@ -120,3 +124,30 @@ fun enfocarSinToqueDisponible(): Boolean = true
 
 /** Ventana de los diálogos: ocupa la pantalla para poder apartarse del teclado. */
 fun propiedadesDialogo() = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
+
+/**
+ * Escritura nativa sobre los campos: solo hace falta en la web en pantallas táctiles (ver la versión web).
+ * En Android los campos de Compose ya usan el teclado del sistema, así que no hay editor.
+ */
+class EditorNativo private constructor() {
+    fun abrir() {}
+
+    @Suppress("UNUSED_PARAMETER")
+    @Composable
+    fun Texto(
+        valor: String,
+        onValor: (String) -> Unit,
+        estilo: TextStyle,
+        unaLinea: Boolean,
+        minLineas: Int,
+        teclado: KeyboardOptions,
+        marcador: String?,
+        colorMarcador: Color,
+        colorCursor: Color,
+        descripcion: String?
+    ) {}
+}
+
+@Suppress("UNUSED_PARAMETER")
+@Composable
+fun rememberEditorNativo(interaccion: MutableInteractionSource): EditorNativo? = null

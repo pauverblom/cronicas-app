@@ -119,3 +119,17 @@ object Nube {
 
     fun escribirRetrato(codigo: String, hash: String, imagen: String?) = jsNubeEscribirRetrato(codigo, hash, imagen)
 }
+
+// ── Editor nativo de los campos (ayudas.js, cronicasEditor) ──
+
+@JsFun("(o, v, x, y, w, h, cambio, cierre) => window.cronicasEditor.abrir(o, v, x, y, w, h, cambio, cierre)")
+external fun jsEditorAbrir(opciones: String, valor: String, x: Float, y: Float, ancho: Float, alto: Float, alCambiar: (String) -> Unit, alCerrar: () -> Unit): JsAny
+
+@JsFun("(e, x, y, w, h) => window.cronicasEditor.colocar(e, x, y, w, h)")
+external fun jsEditorColocar(e: JsAny, x: Float, y: Float, ancho: Float, alto: Float)
+
+@JsFun("(e, v) => window.cronicasEditor.poner(e, v)")
+external fun jsEditorPoner(e: JsAny, valor: String)
+
+@JsFun("(e) => window.cronicasEditor.cerrar(e)")
+external fun jsEditorCerrar(e: JsAny)

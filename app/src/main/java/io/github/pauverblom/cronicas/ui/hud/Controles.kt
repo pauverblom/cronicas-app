@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import io.github.pauverblom.cronicas.ui.plataforma.rememberEditorNativo
 import io.github.pauverblom.cronicas.ui.plataforma.enfocarSinToqueDisponible
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -392,6 +393,8 @@ fun Campo(
     var campo by remember { mutableStateOf(TextFieldValue(valor, TextRange(valor.length))) }
     if (campo.text != valor) campo = campo.copy(text = valor, selection = TextRange(valor.length))
     val foco = remember { FocusRequester() }
+    // En la web táctil se escribe en un campo nativo del navegador, encima de este (ver EditorNativo)
+    val editor = if (onClick == null) rememberEditorNativo(interaccion) else null
     if (enfocarAlAbrir && enfocarSinToqueDisponible()) {
         LaunchedEffect(Unit) {
             foco.requestFocus()
@@ -416,12 +419,21 @@ fun Campo(
                     }
                     marco(Orn.CHAFLAN, pintura.brocha(c), 16f / 18f * density)
                 }
-                .then(if (onClick != null) Modifier.foco(interaccion).clickable(interaccion, null, role = Role.Button, onClick = onClick) else Modifier),
+                .then(
+                    when {
+                        onClick != null -> Modifier.foco(interaccion).clickable(interaccion, null, role = Role.Button, onClick = onClick)
+                        // Todo el campo se puede tocar para escribir, no solo el texto
+                        editor != null -> Modifier.clickable(remember { MutableInteractionSource() }, null) { editor.abrir() }
+                        else -> Modifier
+                    }
+                ),
             verticalAlignment = if (multilinea) Alignment.Top else Alignment.CenterVertically
         ) {
             Box(Modifier.weight(1f).padding(horizontal = 24.dp, vertical = if (multilinea) 16.dp else 14.dp)) {
                 if (onClick != null) {
                     Text(valor.ifEmpty { marcador.orEmpty() }, style = estilo, color = if (valor.isEmpty()) c.tintaTenue else c.tinta)
+                } else if (editor != null) {
+                    editor.Texto(valor, onValor, estilo, unaLinea, if (unaLinea) 1 else minLineas, teclado, marcador, c.tintaTenue, c.oro, etiqueta)
                 } else {
                     BasicTextField(
                         campo,

@@ -1,5 +1,7 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import io.github.pauverblom.cronicas.ui.hud.textoCompartido
+import io.github.pauverblom.cronicas.ui.hud.compartido
 import androidx.compose.runtime.LaunchedEffect
 import io.github.pauverblom.cronicas.ui.common.FormularioDialog
 import io.github.pauverblom.cronicas.ui.ajustes.ListaTemas
@@ -109,18 +111,21 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, ajustes: AjustesApp, o
                 }
             }
         ) {
-            if (ui != null) {
-                RetratoAvatar(ui.personaje.fotoPath, ui.personaje.nombre, 52.dp, claseId = ui.personaje.claseId)
+            // Mientras se carga, la cabecera ya se pinta con lo que trae la ruta (el destino de la transición)
+            val p = ui?.personaje ?: vm.previa.takeIf { it.nombre.isNotEmpty() }
+            if (p != null) {
+                RetratoAvatar(p.fotoPath, p.nombre, 52.dp, Modifier.compartido("retrato-${p.id}"), claseId = p.claseId)
                 Column(Modifier.weight(1f)) {
                     Text(
-                        ui.personaje.nombre,
+                        p.nombre,
                         style = Tipos.tituloXl.copy(fontSize = 26.sp, lineHeight = 30.sp, letterSpacing = 0.04.em),
                         color = c.tinta,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.textoCompartido("nombre-${p.id}")
                     )
                     Text(
-                        "${ui.hoja.nombreClase} · ${ui.hoja.nombreEspecie} · NV ${ui.hoja.nivel}",
+                        ui?.let { "${it.hoja.nombreClase} · ${it.hoja.nombreEspecie} · NV ${it.hoja.nivel}" } ?: "",
                         style = Tipos.uiSm,
                         color = c.tintaSuave,
                         maxLines = 1,

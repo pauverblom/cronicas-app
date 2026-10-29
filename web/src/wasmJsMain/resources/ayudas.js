@@ -116,3 +116,70 @@ window.cronicasPintarBarra = function (argb) {
     var meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.setAttribute("content", hex);
 };
+
+/**
+ * Texto nativo para escribir en pantallas táctiles (lo usa EditorNativo en ui/plataforma): un <input> o <textarea>
+ * real, transparente, encima del campo de Compose mientras se escribe. Así el teclado, la selección, copiar y pegar
+ * y el borrado por palabras son los del sistema. [opciones] es JSON; [caja] = [x, y, ancho, alto] en px CSS.
+ */
+window.cronicasEditor = {
+    abrir: function (opciones, valor, x, y, ancho, alto, alCambiar, alCerrar) {
+        var o = JSON.parse(opciones);
+        var e = document.createElement(o.multilinea ? "textarea" : "input");
+        if (!o.multilinea) e.type = "text";
+        e.value = valor;
+        e.setAttribute("inputmode", o.modo);
+        e.setAttribute("enterkeyhint", o.multilinea ? "enter" : "done");
+        e.setAttribute("autocapitalize", o.mayusculas ? "sentences" : "off");
+        e.setAttribute("autocomplete", "off");
+        e.setAttribute("autocorrect", o.multilinea ? "on" : "off");
+        e.setAttribute("spellcheck", o.multilinea ? "true" : "false");
+        if (o.etiqueta) e.setAttribute("aria-label", o.etiqueta);
+        var s = e.style;
+        s.position = "absolute"; s.margin = "0"; s.padding = "0"; s.border = "0"; s.outline = "none";
+        s.background = "transparent"; s.resize = "none"; s.boxSizing = "border-box"; s.zIndex = "5";
+        s.overflow = o.multilinea ? "auto" : "hidden";
+        s.fontFamily = o.fuente; s.fontSize = o.tamano + "px"; s.fontWeight = String(o.peso);
+        s.fontStyle = o.cursiva ? "italic" : "normal"; s.lineHeight = o.interlineado + "px";
+        s.letterSpacing = o.espaciado + "px"; s.color = o.color; s.caretColor = o.cursor;
+        // El resto de la página no deja seleccionar ni sacar el menú de iOS; aquí sí
+        s.webkitUserSelect = "text"; s.userSelect = "text"; s.webkitTouchCallout = "default";
+        window.cronicasEditor.colocar(e, x, y, ancho, alto);
+        var cerrado = false;
+        e.__cerrar = function () { cerrado = true; };
+        e.addEventListener("input", function () { alCambiar(e.value); });
+        e.addEventListener("blur", function () { if (!cerrado) { cerrado = true; alCerrar(); } });
+        if (!o.multilinea) e.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { ev.preventDefault(); e.blur(); } });
+        document.getElementById("app").appendChild(e);
+        // Dentro del toque: solo así Safari saca el teclado
+        e.focus();
+        var n = e.value.length;
+        try { e.setSelectionRange(n, n); } catch (x) {}
+        return e;
+    },
+    colocar: function (e, x, y, ancho, alto) {
+        e.style.left = x + "px"; e.style.top = y + "px"; e.style.width = ancho + "px"; e.style.height = alto + "px";
+    },
+    poner: function (e, valor) { if (e.value !== valor) e.value = valor; },
+    cerrar: function (e) { if (e.__cerrar) e.__cerrar(); if (e.parentNode) e.parentNode.removeChild(e); }
+};
+
+// Con el teclado en pantalla, la app se pinta solo en lo que queda visible (iOS no encoge la ventana), y así
+// los diálogos se recolocan por encima del teclado
+if (window.visualViewport) {
+    (function () {
+        var vv = window.visualViewport;
+        var anterior = "0px";
+        var ajustar = function () {
+            var tapado = Math.max(0, window.innerHeight - vv.height);
+            var nuevo = tapado > 80 ? tapado + "px" : "0px";
+            if (tapado > 80 && (window.scrollY || vv.offsetTop)) window.scrollTo(0, 0);
+            if (nuevo === anterior) return;
+            anterior = nuevo;
+            document.documentElement.style.setProperty("--teclado", nuevo);
+            // Compose solo mide su lienzo de nuevo con el evento resize de la ventana
+            window.dispatchEvent(new Event("resize"));
+        };
+        vv.addEventListener("resize", ajustar);
+    })();
+}

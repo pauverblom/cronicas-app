@@ -137,14 +137,20 @@ fun EntradaLista(
     onClickLargo: () -> Unit,
     modifier: Modifier = Modifier,
     /** Los tres puntos que abren el menú de la entrada (el mismo que mantener pulsado). */
-    onMenu: (() -> Unit)? = null
+    onMenu: (() -> Unit)? = null,
+    /** Con una clave, el retrato y el nombre vuelan a la pantalla que se abre (ver [compartido]). */
+    clave: String? = null
 ) {
     val c = Marca.colores
     Placa(modifier.fillMaxWidth(), pintura = Pintura.Metal, onClick = onClick, onClickLargo = onClickLargo) {
         Row(Modifier.padding(start = 24.dp, end = if (onMenu != null) 8.dp else 24.dp, top = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-            Retrato(retrato, nombre, llama, 56.dp)
+            Retrato(retrato, nombre, llama, 56.dp, if (clave != null) Modifier.compartido("retrato-$clave") else Modifier)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(nombre, style = TextStyle(fontFamily = Cinzel, fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.03.em), color = c.tinta, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(
+                    nombre, style = TextStyle(fontFamily = Cinzel, fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.03.em),
+                    color = c.tinta, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                    modifier = if (clave != null) Modifier.textoCompartido("nombre-$clave") else Modifier
+                )
                 Text(linea, style = Tipos.uiSm, color = c.tintaSuave, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 if (pg != null && pgMax != null) {
                     val color = colorEstadoPg(c, pg, pgMax)

@@ -1,5 +1,28 @@
 package io.github.pauverblom.cronicas.ui.plataforma
 
+import kotlinx.serialization.json.put
+import kotlinx.serialization.json.buildJsonObject
+import io.github.pauverblom.cronicas.web.jsEditorPoner
+import io.github.pauverblom.cronicas.web.jsEditorColocar
+import io.github.pauverblom.cronicas.web.jsEditorCerrar
+import io.github.pauverblom.cronicas.web.jsEditorAbrir
+import io.github.pauverblom.cronicas.ui.theme.FuentesWeb
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.FocusInteraction
 import io.github.pauverblom.cronicas.web.jsPintarBarra
 import io.github.pauverblom.cronicas.web.jsTactil
 import android.app.Application
@@ -141,3 +164,138 @@ fun pintarBarraSistema(argb: Int) = jsPintarBarra(argb)
 fun enfocarSinToqueDisponible(): Boolean = !jsTactil()
 
 fun propiedadesDialogo() = DialogProperties(usePlatformDefaultWidth = false)
+
+// ── Escritura nativa en pantallas táctiles ──
+
+/**
+ * En pantallas táctiles el campo de texto de Compose no se lleva bien con el teclado de iPhone y iPad (no siempre
+ * sale, no hay selección ni pegar del sistema, borrar no salta por palabras). Mientras se escribe, se pone encima
+ * del campo un <input> real y transparente (ayudas.js, cronicasEditor); Compose solo pinta el texto cuando no se
+ * escribe. [abrir] hay que llamarlo dentro del toque: Safari solo saca el teclado así.
+ */
+class EditorNativo internal constructor(private val interaccion: MutableInteractionSource) {
+    internal var editando by mutableStateOf(false)
+    private var elemento: JsAny? = null
+    private var enfoque: FocusInteraction.Focus? = null
+    /** Caja del texto en px CSS, relativa a #app. */
+    private var caja = floatArrayOf(0f, 0f, 0f, 0f)
+    // Lo último que se pintó: valor, a quién avisar y cómo es el texto
+    internal var valor = ""
+    internal var onValor: (String) -> Unit = {}
+    internal var opciones = ""
+
+    fun abrir() {
+        elemento?.let { return }
+        val e = jsEditorAbrir(opciones, valor, caja[0], caja[1], caja[2], caja[3], { nuevo -> valor = nuevo; onValor(nuevo) }, { cerrar() })
+        elemento = e
+        editando = true
+        enfoque = FocusInteraction.Focus().also { interaccion.tryEmit(it) }
+    }
+
+    internal fun cerrar() {
+        val e = elemento ?: return
+        elemento = null
+        jsEditorCerrar(e)
+        editando = false
+        enfoque?.let { interaccion.tryEmit(FocusInteraction.Unfocus(it)) }
+        enfoque = null
+    }
+
+    internal fun colocar(x: Float, y: Float, ancho: Float, alto: Float) {
+        caja = floatArrayOf(x, y, ancho, alto)
+        elemento?.let { jsEditorColocar(it, x, y, ancho, alto) }
+    }
+
+    internal fun sincronizar(texto: String) {
+        valor = texto
+        elemento?.let { jsEditorPoner(it, texto) }
+    }
+
+    /** El texto del campo: pintado por Compose, salvo mientras se escribe en el <input> de encima. */
+    @Composable
+    fun Texto(
+        valor: String,
+        onValor: (String) -> Unit,
+        estilo: TextStyle,
+        unaLinea: Boolean,
+        minLineas: Int,
+        teclado: KeyboardOptions,
+        marcador: String?,
+        colorMarcador: Color,
+        colorCursor: Color,
+        descripcion: String?
+    ) {
+        this.onValor = onValor
+        opciones = opcionesEditor(estilo, unaLinea, teclado, colorCursor, descripcion)
+        LaunchedEffect(valor) { sincronizar(valor) }
+        DisposableEffect(Unit) { onDispose { cerrar() } }
+        val densidad = LocalDensity.current.density
+        Box(
+            Modifier.fillMaxWidth().onGloballyPositioned { c ->
+                val r = c.boundsInWindow()
+                colocar(r.left / densidad, r.top / densidad, r.width / densidad, r.height / densidad)
+            }
+        ) {
+            if (valor.isEmpty() && marcador != null) Text(marcador, style = estilo, color = colorMarcador, maxLines = if (unaLinea) 1 else Int.MAX_VALUE)
+            Text(
+                valor,
+                style = estilo,
+                // Mientras se escribe, el texto lo pinta el <input>; este solo guarda el sitio
+                color = if (editando) Color.Transparent else estilo.color,
+                maxLines = if (unaLinea) 1 else Int.MAX_VALUE,
+                minLines = minLineas,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+/** El editor nativo del campo, solo en pantallas táctiles (null: el campo de Compose de siempre). */
+@Composable
+fun rememberEditorNativo(interaccion: MutableInteractionSource): EditorNativo? =
+    remember(interaccion) { if (jsTactil()) EditorNativo(interaccion) else null }
+
+private fun opcionesEditor(estilo: TextStyle, unaLinea: Boolean, teclado: KeyboardOptions, cursor: Color, descripcion: String?): String {
+    val familia = when (estilo.fontFamily) {
+        FuentesWeb.alegreya -> "Alegreya, serif"
+        FuentesWeb.alegreyaSans -> "'Alegreya Sans', sans-serif"
+        FuentesWeb.cinzel -> "Cinzel, serif"
+        else -> "serif"
+    }
+    val tamano = if (estilo.fontSize.isSp) estilo.fontSize.value else 16f
+    val interlineado = if (estilo.lineHeight.isSp) estilo.lineHeight.value else tamano * 1.3f
+    val espaciado = when {
+        estilo.letterSpacing.isSp -> estilo.letterSpacing.value
+        estilo.letterSpacing.isEm -> estilo.letterSpacing.value * tamano
+        else -> 0f
+    }
+    val modo = when (teclado.keyboardType) {
+        KeyboardType.Number, KeyboardType.NumberPassword -> "numeric"
+        KeyboardType.Decimal -> "decimal"
+        KeyboardType.Phone -> "tel"
+        KeyboardType.Email -> "email"
+        KeyboardType.Uri -> "url"
+        else -> "text"
+    }
+    val mayusculas = teclado.capitalization != KeyboardCapitalization.None || modo == "text"
+    return buildJsonObject {
+        put("multilinea", !unaLinea)
+        put("modo", modo)
+        put("mayusculas", mayusculas && modo == "text")
+        put("fuente", familia)
+        put("tamano", tamano)
+        put("peso", estilo.fontWeight?.weight ?: 400)
+        put("cursiva", estilo.fontStyle == FontStyle.Italic)
+        put("interlineado", interlineado)
+        put("espaciado", espaciado)
+        put("color", cssColor(estilo.color))
+        put("cursor", cssColor(cursor))
+        descripcion?.let { put("etiqueta", it) }
+    }.toString()
+}
+
+private fun cssColor(c: Color): String {
+    val argb = c.toArgb()
+    return "rgba(${argb shr 16 and 0xFF}, ${argb shr 8 and 0xFF}, ${argb and 0xFF}, ${(argb ushr 24) / 255f})"
+}

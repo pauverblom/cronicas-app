@@ -18,8 +18,16 @@
             /* Sitio para la barra de estado. iPadOS 26 la pone siempre encima de la app y no siempre informa de su
                alto (WebKit 301994): en un iPad instalado se deja al menos 28px (ver el script de abajo). */
             --arriba: env(safe-area-inset-top, 0px);
-            --abajo: env(safe-area-inset-bottom, 0px);
+            /* Alto del teclado en pantalla (ayudas.js) */
+            --teclado: 0px;
         }
+        /* Las tipografías de la app, para el texto nativo de los campos en pantallas táctiles */
+        @font-face { font-family: "Alegreya"; font-weight: 400 900; src: url("composeResources/io.github.pauverblom.cronicas.web.recursos/files/fuentes/alegreya.ttf"); }
+        @font-face { font-family: "Alegreya"; font-style: italic; src: url("composeResources/io.github.pauverblom.cronicas.web.recursos/files/fuentes/alegreya_italic.ttf"); }
+        @font-face { font-family: "Alegreya Sans"; font-weight: 400; src: url("composeResources/io.github.pauverblom.cronicas.web.recursos/files/fuentes/alegreya_sans_regular.ttf"); }
+        @font-face { font-family: "Alegreya Sans"; font-weight: 500; src: url("composeResources/io.github.pauverblom.cronicas.web.recursos/files/fuentes/alegreya_sans_medium.ttf"); }
+        @font-face { font-family: "Alegreya Sans"; font-weight: 700; src: url("composeResources/io.github.pauverblom.cronicas.web.recursos/files/fuentes/alegreya_sans_bold.ttf"); }
+        @font-face { font-family: "Cinzel"; font-weight: 400 900; src: url("composeResources/io.github.pauverblom.cronicas.web.recursos/files/fuentes/cinzel.ttf"); }
         html[data-ipad-instalada] { --arriba: max(env(safe-area-inset-top, 0px), 28px); }
         html, body { margin: 0; height: 100%; background: var(--noche); overflow: hidden; overscroll-behavior: none; }
         /* Instalada en la pantalla de inicio, la página ocupa toda la pantalla aunque WebKit dé una ventana más baja */
@@ -27,7 +35,8 @@
             html { height: min(100lvh, calc(100% + env(safe-area-inset-top, 0px))); }
         }
         body { position: relative; }
-        #app { position: absolute; left: 0; right: 0; top: var(--arriba); bottom: var(--abajo); }
+        /* Hasta abajo del todo (bajo el indicador de inicio, que es fino y transparente), salvo con el teclado */
+        #app { position: absolute; left: 0; right: 0; top: var(--arriba); bottom: var(--teclado); }
         /* Franja bajo la barra de estado, del color de la noche. En iPad tapa además el desenfoque que iPadOS 26
            pone bajo la barra: solo lo cambia por un color liso si arriba hay un elemento fijo de casi todo el ancho
            y más de 10px de alto */

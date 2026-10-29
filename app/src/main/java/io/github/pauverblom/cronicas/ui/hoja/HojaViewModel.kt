@@ -45,7 +45,10 @@ private data class Magia(val cj: List<ConjuroConDetalle>, val esp: List<EspacioO
 
 class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidViewModel(app) {
     private val repo = (app as CronicasApp).repository
-    val pid: Long = savedState.toRoute<RutaHoja>().personajeId
+    private val ruta = savedState.toRoute<RutaHoja>()
+    val pid: Long = ruta.personajeId
+    /** Nombre, retrato y clase que trae la ruta, para la cabecera mientras se carga la ficha. */
+    val previa = Personaje(id = pid, nombre = ruta.nombre, fotoPath = ruta.foto).let { p -> ruta.claseId?.let { p.copy(claseId = it) } ?: p }
 
     private val base: Flow<Base> = combine(
         repo.personaje(pid), repo.caracteristicas(pid), repo.estado(pid), repo.objetos(pid), repo.tesoro(pid), ::Base

@@ -79,6 +79,8 @@ fun HomeScreen(
     onAbrir: (Long) -> Unit,
     onNuevo: () -> Unit,
     onAjustes: () -> Unit,
+    /** Abrir la ficha de un personaje de la lista (con lo que hace falta para la transición). */
+    onAbrirFicha: (Personaje) -> Unit = { onAbrir(it.id) },
     ajustes: AjustesApp = AjustesApp(),
     vm: HomeViewModel = viewModel()
 ) {
@@ -167,7 +169,7 @@ fun HomeScreen(
                             CronicasMarcaTheme(ajustes.paraPersonaje(r.personaje)) {
                                 FilaPersonaje(
                                     r,
-                                    onClick = { onAbrir(r.personaje.id) },
+                                    onClick = { onAbrirFicha(r.personaje) },
                                     onExportar = {
                                         exportando = r.personaje
                                         exportar("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
@@ -486,7 +488,8 @@ private fun FilaPersonaje(
             llama = llamaDe(p.claseId),
             onClick = onClick,
             onClickLargo = { menu = true },
-            onMenu = { menu = true }
+            onMenu = { menu = true },
+            clave = p.id.toString()
         )
         // El menú sale junto a los tres puntos, en la esquina de la tarjeta
         Box(Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
