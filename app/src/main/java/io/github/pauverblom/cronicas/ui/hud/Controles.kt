@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import io.github.pauverblom.cronicas.ui.plataforma.enfocarSinToqueDisponible
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -391,7 +392,7 @@ fun Campo(
     var campo by remember { mutableStateOf(TextFieldValue(valor, TextRange(valor.length))) }
     if (campo.text != valor) campo = campo.copy(text = valor, selection = TextRange(valor.length))
     val foco = remember { FocusRequester() }
-    if (enfocarAlAbrir) {
+    if (enfocarAlAbrir && enfocarSinToqueDisponible()) {
         LaunchedEffect(Unit) {
             foco.requestFocus()
             campo = campo.copy(selection = TextRange(0, campo.text.length))

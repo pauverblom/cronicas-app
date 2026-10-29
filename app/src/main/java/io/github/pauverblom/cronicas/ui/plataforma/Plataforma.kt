@@ -111,5 +111,8 @@ fun esquemaDinamico(oscuro: Boolean): ColorScheme? {
 @Composable
 fun anchoVentanaDp(): Int = LocalConfiguration.current.screenWidthDp
 
+/** Si un campo puede enfocarse solo al abrirse (y sacar el teclado) sin que se toque. */
+fun enfocarSinToqueDisponible(): Boolean = true
+
 /** Ventana de los diálogos: ocupa la pantalla para poder apartarse del teclado. */
 fun propiedadesDialogo() = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)

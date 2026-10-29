@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.plataforma
 
+import io.github.pauverblom.cronicas.web.jsTactil
 import android.app.Application
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -128,5 +129,11 @@ fun anchoVentanaDp(): Int {
     val ancho = LocalWindowInfo.current.containerSize.width
     return with(LocalDensity.current) { ancho.toDp().value.toInt() }
 }
+
+/**
+ * En pantallas táctiles no: Safari (iPhone, iPad) solo saca el teclado si el foco llega dentro de un toque, y un
+ * campo ya enfocado no vuelve a pedirlo al tocarlo, así que el teclado no salía nunca.
+ */
+fun enfocarSinToqueDisponible(): Boolean = !jsTactil()
 
 fun propiedadesDialogo() = DialogProperties(usePlatformDefaultWidth = false)

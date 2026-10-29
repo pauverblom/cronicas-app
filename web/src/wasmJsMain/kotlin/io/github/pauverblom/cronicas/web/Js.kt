@@ -20,6 +20,10 @@ private external fun jsProcesarRetrato(base64: String): Promise<JsString?>
 @JsFun("(ms) => window.cronicasFechaHora(ms)")
 external fun jsFechaHora(ms: Double): String
 
+/** Pantalla táctil (iPhone, iPad, Android): el puntero principal es un dedo. */
+@JsFun("() => navigator.maxTouchPoints > 0 && window.matchMedia('(pointer: coarse)').matches")
+external fun jsTactil(): Boolean
+
 @JsFun("() => Date.now()")
 external fun jsAhora(): Double
 
