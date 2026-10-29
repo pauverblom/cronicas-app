@@ -1,6 +1,5 @@
 package io.github.pauverblom.cronicas.ui.ajustes
 
-import io.github.pauverblom.cronicas.ui.plataforma.materialYouDisponible
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -29,8 +28,6 @@ import io.github.pauverblom.cronicas.data.Tema
 import io.github.pauverblom.cronicas.ui.hud.BotonIcono
 import io.github.pauverblom.cronicas.ui.hud.Cabecera
 import io.github.pauverblom.cronicas.ui.hud.Etiqueta
-import io.github.pauverblom.cronicas.ui.hud.Filete
-import io.github.pauverblom.cronicas.ui.hud.Opcion
 import io.github.pauverblom.cronicas.ui.hud.TituloPantalla
 import io.github.pauverblom.cronicas.ui.hud.Tono
 import io.github.pauverblom.cronicas.ui.hud.Ventana
@@ -55,20 +52,19 @@ fun AjustesScreen(onVolver: () -> Unit, vm: AjustesViewModel = viewModel()) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Ventana("Tema", Modifier.widthIn(max = 560.dp)) {
-                Tema.entries.forEachIndexed { i, t ->
-                    if (i > 0) Filete()
-                    val disponible = t != Tema.MATERIAL_YOU || materialYouDisponible()
-                    Opcion(ajustes.tema == t, { vm.setTema(t) }, Modifier.fillMaxWidth(), activa = disponible) {
-                        Column(Modifier.padding(start = 4.dp, top = 6.dp, bottom = 6.dp)) {
-                            Text(t.etiqueta, style = Tipos.ui, color = if (disponible) c.tinta else c.tintaTenue)
-                            Text(
-                                if (disponible) t.descripcion else "Necesita Android 12 o superior",
-                                style = Tipos.caption,
-                                color = c.tintaSuave
-                            )
-                        }
-                    }
-                }
+                ListaTemas(
+                    opciones = Tema.DE_LA_APP,
+                    elegido = ajustes.tema,
+                    onElegir = { it?.let(vm::setTema) },
+                    colores = ajustes.colores,
+                    onColores = vm::setColores
+                )
+                Text(
+                    "Cada personaje puede tener su propio tema (también con los colores de su retrato): «Tema de la ficha», en el menú de cada ficha.",
+                    style = Tipos.cuerpoSm,
+                    color = c.tintaSuave,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
             }
             Ventana("Modo", Modifier.widthIn(max = 560.dp)) {
                 val fijo = ajustes.tema == Tema.PERGAMINO_OSCURO || ajustes.tema == Tema.PERGAMINO_CLARO

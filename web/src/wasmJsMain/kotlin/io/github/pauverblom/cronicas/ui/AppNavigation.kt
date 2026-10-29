@@ -40,6 +40,7 @@ fun AppNavigation(app: CronicasApp, ajustes: AjustesApp) {
                 onAbrir = { nav.navigate(RutaHoja(it)) },
                 onNuevo = { nav.navigate(RutaWizard) },
                 onAjustes = { nav.navigate(RutaAjustes) },
+                ajustes = ajustes,
                 vm = viewModel { HomeViewModel(app) }
             )
         }

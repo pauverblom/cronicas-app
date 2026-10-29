@@ -15,8 +15,10 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.toArgb
 import com.materialkolor.dynamicColorScheme
 import io.github.pauverblom.cronicas.data.AjustesApp
+import io.github.pauverblom.cronicas.data.ColoresTema
 import io.github.pauverblom.cronicas.data.Modo
 import io.github.pauverblom.cronicas.data.Tema
 import io.github.pauverblom.cronicas.rules.Atributo
@@ -217,43 +219,70 @@ private fun contraste(a: Color, b: Color): Float {
 }
 
 /**
- * Lleva un esquema generado (Material You o el color del retrato) a los papeles del sistema y conserva los
- * colores con significado del pergamino del mismo modo. Si la tinta no llega a 4.5:1 sobre algún fondo,
- * devuelve el pergamino tal cual.
+ * La paleta de un tema generado con tres colores ([ColoresTema]), sobre el pergamino del mismo modo:
+ * - el fondo tiñe la noche, el cristal de las ventanas y la tinta (con los tonos neutros de su esquema, algo más
+ *   saturados para que el color se note);
+ * - los marcos, tal cual, dan el metal de ventanas, placas y botones;
+ * - el acento da el «oro» de títulos, pestaña activa, foco y botón principal (aclarado u oscurecido solo si
+ *   no se leería sobre los fondos).
+ * Los colores con significado (PG, características, avisos) se quedan como en el pergamino. Si la tinta no llega
+ * a 4.5:1 sobre algún fondo, devuelve el pergamino tal cual.
  */
-private fun paletaDesde(s: ColorScheme, base: Paleta): Paleta {
+internal fun paletaDe(colores: ColoresTema, base: Paleta): Paleta {
     val o = base.oscuro
-    val p = s.primary
+    val f = dynamicColorScheme(seedColor = Color(colores.fondo), isDark = o, isAmoled = false)
+    // Los marcos son adorno: el color tal cual se eligió
+    val m = Color(colores.marco)
+    val a = dynamicColorScheme(seedColor = Color(colores.acento), isDark = o, isAmoled = false)
+    // Cristal de las ventanas: el neutro del fondo con algo de su color
+    fun cristal(neutro: Color, cuanto: Float) = lerp(neutro, f.primaryContainer, cuanto)
+    val noche = if (o) lerp(cristal(f.surfaceContainerLowest, 0.25f), Color.Black, 0.35f) else cristal(f.surfaceContainerHighest, 0.2f)
+    val vitela100 = cristal(f.surfaceContainerLow, if (o) 0.18f else 0.12f)
+    val vitela200 = cristal(if (o) f.surfaceContainer else f.surfaceContainerLowest, if (o) 0.2f else 0.1f)
+    val vitela300 = if (o) lerp(cristal(f.surfaceContainerLowest, 0.2f), Color.Black, 0.6f) else cristal(f.surfaceContainerHigh, 0.15f)
+    // El acento es texto: el color elegido si se lee sobre los fondos; si no, lo justo hacia su tono legible
+    val fondos = listOf(noche, vitela100, vitela200, vitela300)
+    val p = (0..10).map { lerp(Color(colores.acento), a.primary, it / 10f) }
+        .firstOrNull { cand -> fondos.all { contraste(cand, it) >= 4.5f } } ?: a.primary
+    val sobreP = if (contraste(Color.Black, p) >= contraste(Color.White, p)) Color(0xFF14100A) else Color(0xFFFFF8EE)
     val generada = base.copy(
-        noche = if (o) lerp(s.surfaceContainerLowest, Color.Black, 0.35f) else s.surfaceContainerHighest,
-        bruma = p.copy(alpha = if (o) 0.22f else 0.3f),
-        estrella = if (o) lerp(s.onSurface, p, 0.3f) else s.outlineVariant,
-        vitela100 = if (o) s.surfaceContainerLow else s.surfaceContainerLow,
-        vitela200 = if (o) s.surfaceContainer else s.surfaceContainerLowest,
-        vitela300 = if (o) lerp(s.surfaceContainerLowest, Color.Black, 0.6f) else s.surfaceContainerHigh,
-        regla = s.outlineVariant,
-        dorado = lerp(p, s.surface, 0.35f),
-        metalAlto = lerp(p, Color.White, 0.45f),
-        metalMedio = p,
-        metalBajo = lerp(p, Color.Black, 0.55f),
-        hierroAlto = lerp(s.outline, Color.White, 0.3f),
-        hierro = s.outline,
-        hierroBajo = lerp(s.outline, Color.Black, 0.5f),
-        tinta = s.onSurface,
-        tintaSuave = s.onSurfaceVariant,
-        tintaTenue = s.outline,
+        noche = noche,
+        bruma = f.primary.copy(alpha = if (o) 0.24f else 0.3f),
+        estrella = if (o) lerp(f.onSurface, f.primary, 0.3f) else f.outlineVariant,
+        vitela100 = vitela100,
+        vitela200 = vitela200,
+        vitela300 = vitela300,
+        regla = f.outlineVariant,
+        dorado = lerp(m, f.surface, 0.35f),
+        metalAlto = lerp(m, Color.White, 0.45f),
+        metalMedio = m,
+        metalBajo = lerp(m, Color.Black, 0.55f),
+        hierroAlto = lerp(f.outline, Color.White, 0.3f),
+        hierro = f.outline,
+        hierroBajo = lerp(f.outline, Color.Black, 0.5f),
+        tinta = f.onSurface,
+        tintaSuave = f.onSurfaceVariant,
+        tintaTenue = f.outline,
         oro = p,
         oroBrillo = lerp(p, if (o) Color.White else Color.Black, 0.3f),
-        oroRelleno = if (o) p else lerp(p, Color.White, 0.25f),
-        sobreOro = if (o) s.onPrimary else lerp(s.onPrimaryContainer, Color.Black, 0.4f),
+        oroRelleno = p,
+        sobreOro = sobreP,
         foco = if (o) lerp(p, Color.White, 0.3f) else p,
-        grabadoAlto = if (o) lerp(p, Color.Black, 0.35f) else Color(0xFFFFFAF0),
-        grabadoBajo = if (o) Color.Black else lerp(p, Color.Black, 0.4f)
+        grabadoAlto = if (o) lerp(m, Color.Black, 0.35f) else Color(0xFFFFFAF0),
+        grabadoBajo = if (o) Color.Black else lerp(m, Color.Black, 0.4f)
     )
-    val fondos = listOf(generada.noche, generada.vitela100, generada.vitela200, generada.vitela300)
     val legible = fondos.all { contraste(generada.tinta, it) >= 4.5f && contraste(generada.tintaSuave, it) >= 4.5f }
     return if (legible) generada else base
 }
+
+/** Las paletas ya generadas: cada tarjeta de la pantalla de inicio puede llevar la suya. */
+private val paletasGeneradas = HashMap<Pair<ColoresTema, Boolean>, Paleta>()
+
+private fun paletaGuardada(colores: ColoresTema, base: Paleta): Paleta =
+    paletasGeneradas.getOrPut(colores to base.oscuro) {
+        if (paletasGeneradas.size > 64) paletasGeneradas.clear()
+        paletaDe(colores, base)
+    }
 
 /** Esquema de Material con los colores del sistema, para lo que aún dibuja Material (menús, hojas, selección de texto). */
 private fun esquemaMaterial(c: Paleta): ColorScheme {
@@ -309,13 +338,12 @@ fun esTemaOscuro(ajustes: AjustesApp): Boolean {
 }
 
 /**
- * Tema de la app. Con [Tema.RETRATO], [semilla] es el color sacado del retrato del personaje;
- * sin retrato (o fuera de una ficha) se usa el pergamino que corresponda al modo.
+ * Tema de la app (o de una ficha, con [AjustesApp.paraPersonaje]). Material You toma del sistema el acento
+ * (primario), los marcos (terciario) y el fondo (secundario); sin Material You se usa el pergamino del modo.
  */
 @Composable
 fun CronicasMarcaTheme(
     ajustes: AjustesApp = AjustesApp(),
-    semilla: Int? = null,
     content: @Composable () -> Unit
 ) {
     val oscuro = esTemaOscuro(ajustes)
@@ -324,12 +352,10 @@ fun CronicasMarcaTheme(
     val paleta: Paleta = when (ajustes.tema) {
         Tema.PERGAMINO_OSCURO -> PergaminoOscuro
         Tema.PERGAMINO_CLARO -> PergaminoClaro
-        Tema.MATERIAL_YOU -> dinamico?.let { remember(it, oscuro) { paletaDesde(it, pergamino) } } ?: pergamino
-        Tema.RETRATO -> semilla?.let { seed ->
-            remember(seed, oscuro) {
-                paletaDesde(dynamicColorScheme(seedColor = Color(seed), isDark = oscuro, isAmoled = false), pergamino)
-            }
+        Tema.MATERIAL_YOU -> dinamico?.let {
+            paletaGuardada(ColoresTema(it.primary.toArgb(), it.tertiary.toArgb(), it.secondary.toArgb()), pergamino)
         } ?: pergamino
+        Tema.PERSONALIZADO, Tema.RETRATO -> paletaGuardada(ajustes.colores, pergamino)
     }
     val esquema = remember(paleta) { esquemaMaterial(paleta) }
     CompositionLocalProvider(LocalPaleta provides paleta) {

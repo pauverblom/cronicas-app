@@ -43,8 +43,39 @@ window.cronicasDescargar = function (nombre, mime, base64) {
 };
 
 /**
- * Retrato: recorte cuadrado centrado a 512 px como mucho, en JPEG, y su color dominante (ARGB) para el tema
- * «Desde retrato». Devuelve JSON {"base64", "color"} o null si la imagen no se puede leer.
+ * Los tres colores del tema «Desde retrato» (ARGB), como en la app Android: el acento es el tono más vivo (y
+ * presente); los marcos, el siguiente tono vivo bien distinto del acento (o el acento); el fondo, el tono de las zonas
+ * oscuras y apagadas. Los píxeles se agrupan por tono en 24 cubos. Devuelve null si la imagen es gris.
+ */
+function coloresRetrato(datos) {
+    var cubos = [], oscuro = { r: 0, g: 0, b: 0, n: 0 };
+    for (var k = 0; k < 24; k++) cubos.push({ r: 0, g: 0, b: 0, n: 0, peso: 0, tono: k * 15 + 7.5 });
+    for (var i = 0; i < datos.length; i += 16) {
+        var R = datos[i], G = datos[i + 1], B = datos[i + 2];
+        var max = Math.max(R, G, B), min = Math.min(R, G, B), l = (max + min) / 510, d = (max - min) / 255;
+        var sat = d === 0 ? 0 : d / (1 - Math.abs(2 * l - 1));
+        if (l < 0.45) { oscuro.r += R; oscuro.g += G; oscuro.b += B; oscuro.n++; }
+        if (sat < 0.15 || l < 0.08 || l > 0.95) continue;
+        var h = 0;
+        if (max === R) h = ((G - B) / (max - min)) % 6; else if (max === G) h = (B - R) / (max - min) + 2; else h = (R - G) / (max - min) + 4;
+        h = (h * 60 + 360) % 360;
+        var c = cubos[Math.floor(h / 15) % 24];
+        // Cuenta más lo vivo que lo extenso: un fondo grande y apagado no se lleva el acento
+        c.r += R; c.g += G; c.b += B; c.n++; c.peso += d * d;
+    }
+    var argb = function (c) { return ((0xff << 24) | (Math.round(c.r / c.n) << 16) | (Math.round(c.g / c.n) << 8) | Math.round(c.b / c.n)) | 0; };
+    var distancia = function (a, b) { var x = Math.abs(a - b) % 360; return x > 180 ? 360 - x : x; };
+    var orden = cubos.filter(function (c) { return c.n > 0; }).sort(function (a, b) { return b.peso - a.peso; });
+    if (orden.length === 0) return null;
+    var acento = orden[0];
+    var marco = orden.filter(function (c) { return distancia(c.tono, acento.tono) >= 30; })[0] || acento;
+    var fondo = oscuro.n > 0 ? argb(oscuro) : argb(acento);
+    return { acento: argb(acento), marco: argb(marco), fondo: fondo };
+}
+
+/**
+ * Retrato: recorte cuadrado centrado a 512 px como mucho, en JPEG, y sus colores para el tema
+ * «Desde retrato». Devuelve JSON {"base64", "colores": {"acento", "marco", "fondo"} o null} o null si la imagen no se puede leer.
  */
 window.cronicasProcesarRetrato = function (base64) {
     return new Promise(function (resolver) {
@@ -55,15 +86,9 @@ window.cronicasProcesarRetrato = function (base64) {
             canvas.width = destino; canvas.height = destino;
             var ctx = canvas.getContext("2d");
             ctx.drawImage(img, (img.width - lado) / 2, (img.height - lado) / 2, lado, lado, 0, 0, destino, destino);
-            var datos = ctx.getImageData(0, 0, destino, destino).data, r = 0, g = 0, b = 0, peso = 0;
-            for (var i = 0; i < datos.length; i += 16) {
-                var R = datos[i], G = datos[i + 1], B = datos[i + 2];
-                var max = Math.max(R, G, B), min = Math.min(R, G, B), w = (max - min) / 255 + 0.05;
-                r += R * w; g += G * w; b += B * w; peso += w;
-            }
-            var color = peso > 0 ? ((0xff << 24) | (Math.round(r / peso) << 16) | (Math.round(g / peso) << 8) | Math.round(b / peso)) : 0;
+            var colores = coloresRetrato(ctx.getImageData(0, 0, destino, destino).data);
             var jpeg = canvas.toDataURL("image/jpeg", 0.9);
-            resolver(JSON.stringify({ base64: jpeg.substring(jpeg.indexOf(",") + 1), color: color | 0 }));
+            resolver(JSON.stringify({ base64: jpeg.substring(jpeg.indexOf(",") + 1), colores: colores }));
         };
         img.onerror = function () { resolver(null); };
         img.src = "data:image/*;base64," + base64;

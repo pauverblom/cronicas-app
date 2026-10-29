@@ -380,7 +380,7 @@ private fun PasoNombre(s: WizardState, vm: WizardViewModel, llama: Llama) {
             if (s.retrato != null) Boton("Quitar", { vm.editar { it.copy(retrato = null) } }, variante = Variante.PELIGRO_DISCRETO)
         }
     }
-    Ayuda("Con el tema «Desde retrato», la ficha usará los colores de esta imagen.")
+    Ayuda("Con «Tema de la ficha», en el menú de la ficha, puedes darle los colores de esta imagen.")
 }
 
 /** Datos de una especie para su tarjeta. */

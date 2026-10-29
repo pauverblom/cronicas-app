@@ -43,8 +43,17 @@ data class Personaje(
     val cabello: String = "",
     /** Ruta absoluta del retrato dentro de filesDir, o null. */
     val fotoPath: String? = null,
-    /** Color semilla (ARGB) extraído del retrato para el tema "Desde retrato". */
+    /** Color de acento (ARGB) sacado del retrato para el tema «Desde retrato». */
     val colorSemilla: Int? = null,
+    /** Colores de los marcos y del fondo sacados del retrato. */
+    val colorRetratoMarco: Int? = null,
+    val colorRetratoFondo: Int? = null,
+    /** Tema propio de la ficha ([Tema] por su nombre), o null para usar el de la app. */
+    val tema: String? = null,
+    /** Colores del tema personalizado de la ficha. */
+    val colorAcento: Int? = null,
+    val colorMarco: Int? = null,
+    val colorFondo: Int? = null,
     val creado: Long = System.currentTimeMillis()
 )
 

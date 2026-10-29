@@ -22,7 +22,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         EspacioOverride::class,
         Nota::class
     ],
-    version = 6
+    version = 7
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun personajeDao(): PersonajeDao
@@ -55,6 +55,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Tema propio de cada ficha y los tres colores del retrato. */
+        private val MIGRACION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE personaje ADD COLUMN colorRetratoMarco INTEGER")
+                db.execSQL("ALTER TABLE personaje ADD COLUMN colorRetratoFondo INTEGER")
+                db.execSQL("ALTER TABLE personaje ADD COLUMN tema TEXT")
+                db.execSQL("ALTER TABLE personaje ADD COLUMN colorAcento INTEGER")
+                db.execSQL("ALTER TABLE personaje ADD COLUMN colorMarco INTEGER")
+                db.execSQL("ALTER TABLE personaje ADD COLUMN colorFondo INTEGER")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
                 // La versión 4 rehace el esquema para la ficha de personaje: los datos de la 3 se descartan.
@@ -63,7 +75,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "cronicas_marca.db"
                 )
-                    .addMigrations(MIGRACION_4_5, MIGRACION_5_6)
+                    .addMigrations(MIGRACION_4_5, MIGRACION_5_6, MIGRACION_6_7)
                     .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance

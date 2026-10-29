@@ -1,5 +1,7 @@
 package io.github.pauverblom.cronicas.ui.home
 
+import io.github.pauverblom.cronicas.ui.theme.CronicasMarcaTheme
+import io.github.pauverblom.cronicas.data.AjustesApp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.foundation.layout.BoxWithConstraints
 import io.github.pauverblom.cronicas.ui.plataforma.modeloRetrato
@@ -77,6 +79,7 @@ fun HomeScreen(
     onAbrir: (Long) -> Unit,
     onNuevo: () -> Unit,
     onAjustes: () -> Unit,
+    ajustes: AjustesApp = AjustesApp(),
     vm: HomeViewModel = viewModel()
 ) {
     val personajes by vm.personajes.collectAsState()
@@ -160,17 +163,20 @@ fun HomeScreen(
                             }
                         }
                         if (!plegada) items(g.personajes, key = { it.personaje.id }) { r ->
-                            FilaPersonaje(
-                                r,
-                                onClick = { onAbrir(r.personaje.id) },
-                                onExportar = {
-                                    exportando = r.personaje
-                                    exportar("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
-                                },
-                                onEliminar = { borrando = r.personaje },
-                                onSincronizar = if (vm.syncDisponible) ({ sincronizando = r.personaje }) else null,
-                                onMover = { moviendo = r.personaje }
-                            )
+                            // Cada tarjeta con el tema de su ficha
+                            CronicasMarcaTheme(ajustes.paraPersonaje(r.personaje)) {
+                                FilaPersonaje(
+                                    r,
+                                    onClick = { onAbrir(r.personaje.id) },
+                                    onExportar = {
+                                        exportando = r.personaje
+                                        exportar("${r.personaje.nombre.ifBlank { "personaje" }}.cronicas.json")
+                                    },
+                                    onEliminar = { borrando = r.personaje },
+                                    onSincronizar = if (vm.syncDisponible) ({ sincronizando = r.personaje }) else null,
+                                    onMover = { moviendo = r.personaje }
+                                )
+                            }
                         }
                     }
                     item { Box(Modifier.navigationBarsPadding()) }

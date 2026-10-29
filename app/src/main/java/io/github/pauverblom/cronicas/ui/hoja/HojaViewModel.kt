@@ -1,5 +1,8 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import io.github.pauverblom.cronicas.data.Tema
+import io.github.pauverblom.cronicas.data.ColoresTema
+import io.github.pauverblom.cronicas.data.conRetrato
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -73,14 +76,20 @@ class HojaViewModel(app: Application, savedState: SavedStateHandle) : AndroidVie
 
     fun setRetrato(archivo: Archivo) = lanzar {
         val p = repo.getPersonaje(pid) ?: return@lanzar
-        val (path, semilla) = runCatching { Retratos.guardar(getApplication(), pid, archivo, p.fotoPath) }.getOrNull() ?: return@lanzar
-        repo.updatePersonaje(p.copy(fotoPath = path, colorSemilla = semilla))
+        val (path, colores) = runCatching { Retratos.guardar(getApplication(), pid, archivo, p.fotoPath) }.getOrNull() ?: return@lanzar
+        repo.updatePersonaje(p.conRetrato(path, colores))
+    }
+
+    /** Tema propio de la ficha ([tema] null: el de la app); [colores] solo para el personalizado. */
+    fun setTema(tema: Tema?, colores: ColoresTema?) = lanzar {
+        val p = repo.getPersonaje(pid) ?: return@lanzar
+        repo.updatePersonaje(p.copy(tema = tema?.name, colorAcento = colores?.acento, colorMarco = colores?.marco, colorFondo = colores?.fondo))
     }
 
     fun quitarRetrato() = lanzar {
         val p = repo.getPersonaje(pid) ?: return@lanzar
         p.fotoPath?.let { Retratos.borrar(it) }
-        repo.updatePersonaje(p.copy(fotoPath = null, colorSemilla = null))
+        repo.updatePersonaje(p.conRetrato(null, null))
     }
 
     fun subirNivel(nuevoNivel: Int, pgGanados: Int) = lanzar { repo.subirNivel(pid, nuevoNivel, pgGanados) }

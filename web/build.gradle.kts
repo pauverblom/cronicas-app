@@ -26,6 +26,7 @@ val compartidos = listOf(
     "ui/hud/**",
     "ui/common/Carrusel.kt",
     "ui/common/Componentes.kt",
+    "ui/common/SelectorColor.kt",
     "ui/common/Fuego.kt",
     "ui/hoja/**",
     "ui/home/**",

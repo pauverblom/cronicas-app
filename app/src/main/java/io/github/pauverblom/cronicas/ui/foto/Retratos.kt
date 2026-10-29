@@ -10,6 +10,7 @@ import com.canhub.cropper.CropImageContract
 import com.canhub.cropper.CropImageContractOptions
 import com.canhub.cropper.CropImageOptions
 import com.canhub.cropper.CropImageView
+import io.github.pauverblom.cronicas.data.ColoresTema
 import io.github.pauverblom.cronicas.ui.plataforma.Archivo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -24,9 +25,9 @@ object Retratos {
     /**
      * Copia la imagen recortada a filesDir/retratos (512 px, JPEG) y extrae su color dominante.
      * Cada guardado usa un nombre nuevo para que la caché de imágenes no muestre el retrato anterior.
-     * Devuelve la ruta y el color semilla (ARGB).
+     * Devuelve la ruta y los colores del tema «Desde retrato».
      */
-    suspend fun guardar(context: Context, pid: Long, uri: Archivo, anterior: String?): Pair<String, Int?> = withContext(Dispatchers.IO) {
+    suspend fun guardar(context: Context, pid: Long, uri: Archivo, anterior: String?): Pair<String, ColoresTema?> = withContext(Dispatchers.IO) {
         val original = context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it) }
             ?: error("No se pudo leer la imagen")
         val escala = LADO.toFloat() / maxOf(original.width, original.height)
@@ -36,20 +37,37 @@ object Retratos {
         val file = File(directorio(context), "retrato_${pid}_${System.currentTimeMillis()}.jpg")
         file.outputStream().use { bmp.compress(Bitmap.CompressFormat.JPEG, 90, it) }
         anterior?.let { File(it).takeIf { f -> f.absolutePath != file.absolutePath }?.delete() }
-        file.absolutePath to colorSemilla(bmp)
+        file.absolutePath to colores(bmp)
     }
 
     fun borrar(path: String) {
         File(path).delete()
     }
 
-    /** Color dominante del retrato; si es muy apagado, el vibrante. */
-    fun colorSemilla(bmp: Bitmap): Int? {
+    /**
+     * Los tres colores del tema «Desde retrato»: el acento es el color dominante (si es muy apagado, el vibrante);
+     * los marcos, el color vivo del retrato más distinto del acento; el fondo, el tono apagado de las sombras.
+     */
+    fun colores(bmp: Bitmap): ColoresTema? {
         val palette = Palette.from(bmp).maximumColorCount(16).generate()
         val dominante = palette.dominantSwatch
         val vibrante = palette.vibrantSwatch ?: palette.lightVibrantSwatch ?: palette.darkVibrantSwatch
         val saturacion = dominante?.hsl?.get(1) ?: 0f
-        return (if (saturacion < 0.15f && vibrante != null) vibrante else dominante ?: vibrante)?.rgb
+        val acento = (if (saturacion < 0.15f && vibrante != null) vibrante else dominante ?: vibrante) ?: return null
+        val vivos = listOfNotNull(
+            palette.vibrantSwatch, palette.lightVibrantSwatch, palette.darkVibrantSwatch,
+            palette.mutedSwatch, palette.lightMutedSwatch
+        )
+        val marco = vivos.filter { it.rgb != acento.rgb }.maxByOrNull { distanciaTono(it.hsl[0], acento.hsl[0]) * it.population }
+            ?.takeIf { distanciaTono(it.hsl[0], acento.hsl[0]) >= 30f } ?: acento
+        val fondo = palette.darkMutedSwatch ?: palette.mutedSwatch ?: palette.darkVibrantSwatch ?: acento
+        return ColoresTema(acento.rgb, marco.rgb, fondo.rgb)
+    }
+
+    /** Distancia entre dos tonos en grados (0..180). */
+    private fun distanciaTono(a: Float, b: Float): Float {
+        val d = kotlin.math.abs(a - b) % 360f
+        return if (d > 180f) 360f - d else d
     }
 }
 

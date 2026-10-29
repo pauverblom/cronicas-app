@@ -31,7 +31,8 @@ fun AppNavigation(ajustes: AjustesApp) {
             HomeScreen(
                 onAbrir = { nav.navigate(RutaHoja(it)) },
                 onNuevo = { nav.navigate(RutaWizard) },
-                onAjustes = { nav.navigate(RutaAjustes) }
+                onAjustes = { nav.navigate(RutaAjustes) },
+                ajustes = ajustes
             )
         }
         composable<RutaWizard> {

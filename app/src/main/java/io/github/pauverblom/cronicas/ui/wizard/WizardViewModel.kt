@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.wizard
 
+import io.github.pauverblom.cronicas.data.conRetrato
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -78,8 +79,8 @@ class WizardViewModel(app: Application) : AndroidViewModel(app) {
             }
             val id = repo.crearPersonaje(p, c, s.pgTotal ?: 1, Tesoro(0, oro = s.oro.toIntOrNull() ?: 0))
             s.retrato?.let { uri ->
-                runCatching { Retratos.guardar(getApplication(), id, uri, null) }.getOrNull()?.let { (path, semilla) ->
-                    repo.getPersonaje(id)?.let { repo.updatePersonaje(it.copy(fotoPath = path, colorSemilla = semilla)) }
+                runCatching { Retratos.guardar(getApplication(), id, uri, null) }.getOrNull()?.let { (path, colores) ->
+                    repo.getPersonaje(id)?.let { repo.updatePersonaje(it.conRetrato(path, colores)) }
                 }
             }
             onCreado(id)

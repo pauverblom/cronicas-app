@@ -1,5 +1,12 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import androidx.compose.runtime.LaunchedEffect
+import io.github.pauverblom.cronicas.ui.common.FormularioDialog
+import io.github.pauverblom.cronicas.ui.ajustes.ListaTemas
+import io.github.pauverblom.cronicas.data.coloresRetrato
+import io.github.pauverblom.cronicas.data.coloresPropios
+import io.github.pauverblom.cronicas.data.ColoresTema
+import io.github.pauverblom.cronicas.data.Personaje
 import io.github.pauverblom.cronicas.ui.plataforma.rememberGuardarArchivo
 import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
 import androidx.compose.foundation.background
@@ -54,21 +61,22 @@ enum class Pestana(val titulo: String) { RESUMEN("Resumen"), PERSONAJE("Personaj
 @Composable
 fun HojaScreen(ajustes: AjustesApp, onVolver: () -> Unit, vm: HojaViewModel = viewModel()) {
     val ui by vm.ui.collectAsState()
-    val semilla = ui?.personaje?.colorSemilla
-    // Con "Desde retrato" la ficha entera adopta los colores del personaje, noche incluida
-    if (ajustes.tema == Tema.RETRATO) {
-        CronicasMarcaTheme(ajustes, semilla) { Noche { HojaContenido(ui, vm, onVolver) } }
-    } else {
-        HojaContenido(ui, vm, onVolver)
+    // La ficha se pinta con su propio tema (o el de la app); mientras se elige, con el que se está probando
+    var previa by remember { mutableStateOf<Personaje?>(null) }
+    // Al guardarse el tema, la ficha ya trae el nuevo: se deja de probar (sin parpadeo entre medias)
+    LaunchedEffect(ui?.personaje) { previa = null }
+    CronicasMarcaTheme(ajustes.paraPersonaje(previa ?: ui?.personaje)) {
+        Noche { HojaContenido(ui, vm, ajustes, onPrevia = { previa = it }, onVolver) }
     }
 }
 
 @Composable
-private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) {
+private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, ajustes: AjustesApp, onPrevia: (Personaje?) -> Unit, onVolver: () -> Unit) {
     val aviso = rememberAviso()
     val c = Marca.colores
     var menu by remember { mutableStateOf(false) }
     var borrar by remember { mutableStateOf(false) }
+    var tema by remember { mutableStateOf(false) }
     val exportar = rememberGuardarArchivo("application/json") { archivo ->
         vm.exportar(archivo) { ok -> aviso(if (ok) "Personaje exportado" else "No se pudo exportar") }
     }
@@ -83,8 +91,12 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) 
             },
             acciones = {
                 Box {
-                    BotonIcono({ menu = true }, "Más acciones: exportar o eliminar") { Icon(Icons.Sharp.MoreVert, null, Modifier.size(24.dp)) }
+                    BotonIcono({ menu = true }, "Más acciones: tema, exportar o eliminar") { Icon(Icons.Sharp.MoreVert, null, Modifier.size(24.dp)) }
                     MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(text = { Text("Tema de la ficha…", style = Tipos.ui, color = c.tinta) }, onClick = {
+                            menu = false
+                            tema = true
+                        })
                         DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = {
                             menu = false
                             exportar("${ui?.personaje?.nombre ?: "personaje"}.cronicas.json")
@@ -149,12 +161,51 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, onVolver: () -> Unit) 
         }
     }
 
+    if (tema && ui != null) {
+        TemaFichaDialog(
+            ui.personaje, ajustes,
+            onPrevia = onPrevia,
+            onGuardar = { t, colores -> vm.setTema(t, colores); tema = false },
+            onDismiss = { tema = false; onPrevia(null) }
+        )
+    }
+
     if (borrar && ui != null) {
         ConfirmarDialog(
             titulo = "Eliminar personaje",
             texto = "¿Eliminar a ${ui.personaje.nombre}? Se borrará toda su ficha. Esta acción no se puede deshacer.",
             onDismiss = { borrar = false },
             onConfirm = { vm.eliminar(onVolver) }
+        )
+    }
+}
+
+/**
+ * El tema de esta ficha: el de la app, uno de los temas, uno personalizado o los colores del retrato.
+ * Mientras se elige, la ficha se ve con el tema que se está probando ([onPrevia]); [onGuardar] cierra el diálogo.
+ */
+@Composable
+private fun TemaFichaDialog(
+    p: Personaje,
+    ajustes: AjustesApp,
+    onPrevia: (Personaje?) -> Unit,
+    onGuardar: (Tema?, ColoresTema?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    var elegido by remember { mutableStateOf(p.tema?.let { n -> Tema.entries.firstOrNull { it.name == n } }) }
+    var colores by remember { mutableStateOf(p.coloresPropios() ?: ajustes.colores) }
+    fun probar() = onPrevia(p.copy(tema = elegido?.name, colorAcento = colores.acento, colorMarco = colores.marco, colorFondo = colores.fondo))
+    FormularioDialog("Tema de la ficha", onDismiss = onDismiss, onGuardar = {
+        onGuardar(elegido, colores.takeIf { elegido == Tema.PERSONALIZADO })
+    }) {
+        ListaTemas(
+            opciones = listOf<Tema?>(null) + Tema.entries,
+            elegido = elegido,
+            onElegir = { elegido = it; probar() },
+            colores = colores,
+            onColores = { colores = it; probar() },
+            coloresRetrato = p.coloresRetrato(),
+            descripcionApp = "El tema elegido en Ajustes (${ajustes.tema.etiqueta})"
         )
     }
 }

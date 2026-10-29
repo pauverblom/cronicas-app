@@ -2,6 +2,7 @@ package io.github.pauverblom.cronicas.ui.foto
 
 import android.app.Application
 import androidx.compose.runtime.Composable
+import io.github.pauverblom.cronicas.data.ColoresTema
 import io.github.pauverblom.cronicas.ui.plataforma.Archivo
 import io.github.pauverblom.cronicas.ui.plataforma.ahora
 import io.github.pauverblom.cronicas.ui.plataforma.rememberAbrirArchivo
@@ -38,7 +39,7 @@ object AlmacenRetratos {
 }
 
 @Serializable
-private class RetratoJs(val base64: String, val color: Int)
+private class RetratoJs(val base64: String, val colores: ColoresTema? = null)
 
 private val json = Json { ignoreUnknownKeys = true }
 
@@ -46,15 +47,15 @@ object Retratos {
     @Suppress("UNUSED_PARAMETER")
     fun directorio(context: Application): String = "retratos"
 
-    /** Recorta y reduce la imagen a un retrato de 512 px; devuelve su «ruta» y el color semilla. */
+    /** Recorta y reduce la imagen a un retrato de 512 px; devuelve su «ruta» y los colores del tema «Desde retrato». */
     @Suppress("UNUSED_PARAMETER")
-    suspend fun guardar(context: Application, pid: Long, uri: Archivo, anterior: String?): Pair<String, Int?> {
+    suspend fun guardar(context: Application, pid: Long, uri: Archivo, anterior: String?): Pair<String, ColoresTema?> {
         val r = procesarRetrato(aBase64(uri.bytes))?.let { json.decodeFromString(RetratoJs.serializer(), it) }
             ?: error("No se pudo leer la imagen")
         val path = AlmacenRetratos.nuevaRuta(pid)
         AlmacenRetratos.guardar(path, deBase64(r.base64))
         anterior?.takeIf { it != path }?.let(AlmacenRetratos::borrar)
-        return path to r.color.takeIf { it != 0 }
+        return path to r.colores
     }
 
     fun borrar(path: String) = AlmacenRetratos.borrar(path)
