@@ -24,8 +24,11 @@ table; the app keeps the sheet and fills in everything the rules derive.
 - **Sync between devices:** a character can be synced through Firebase (long-press its card → *Sincronizar*). The
   app shows a code; enter it on another device with *Vincular personaje* and both keep the same sheet, live, last
   change wins. Works offline and catches up when back online. See [Character sync](#character-sync).
-- **Themes:** Pergamino oscuro, Pergamino claro, Material You, or *Desde retrato* (each sheet takes its colors from the
-  character's portrait), with system, light or dark mode.
+- **Themes:** Pergamino oscuro, Pergamino claro, Material You or *Personalizado*, with system, light or dark mode.
+  Material You and Personalizado set three colors: the accent (titles, active tab, main button), the metal of the
+  frames and the background, each with a color picker for Personalizado. Each character can override the app's
+  theme with any of these or *Desde retrato* (three colors taken from the portrait); the home screen shows each
+  character's card in its own theme. The character's theme is part of the sheet, so it syncs and exports with it.
 
 ## Origin of this source code
 
