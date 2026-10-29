@@ -1,5 +1,11 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import io.github.pauverblom.cronicas.ui.hud.brocha
+import io.github.pauverblom.cronicas.ui.hud.Pintura
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.foundation.shape.CutCornerShape
 import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -371,6 +377,30 @@ fun detalleArticulo(a: ArticuloDef): String = listOfNotNull(
     a.unidades.takeIf { it > 1 }?.let { "lote de $it" }
 ).joinToString(" · ")
 
+/** El borde de arriba de la hoja del catálogo: doble filo de metal que sigue las esquinas cortadas. */
+@Composable
+private fun Modifier.bordeHoja(): Modifier {
+    val c = Marca.colores
+    return this.drawWithContent {
+        drawContent()
+        val brocha = Pintura.Metal.brocha(c)
+        fun filo(dentro: Float, grosor: Float) {
+            val corte = 18.dp.toPx()
+            val path = Path().apply {
+                moveTo(dentro, size.height)
+                lineTo(dentro, corte + dentro * 0.4f)
+                lineTo(corte + dentro * 0.4f, dentro)
+                lineTo(size.width - corte - dentro * 0.4f, dentro)
+                lineTo(size.width - dentro, corte + dentro * 0.4f)
+                lineTo(size.width - dentro, size.height)
+            }
+            drawPath(path, brocha, style = Stroke(grosor))
+        }
+        filo(1.dp.toPx(), 1.5.dp.toPx())
+        filo(5.dp.toPx(), 0.8.dp.toPx())
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CatalogoSheet(
@@ -388,9 +418,10 @@ private fun CatalogoSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         containerColor = c.noche,
+        shape = CutCornerShape(topStart = 18.dp, topEnd = 18.dp),
         dragHandle = null
     ) {
-        Column(Modifier.fondoNoche(c).navigationBarsPadding().padding(top = 16.dp)) {
+        Column(Modifier.fondoNoche(c).bordeHoja().navigationBarsPadding().padding(top = 16.dp)) {
             Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Añadir al inventario", style = Tipos.tituloLg, color = c.tinta, modifier = Modifier.weight(1f))

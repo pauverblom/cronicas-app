@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import androidx.compose.foundation.layout.widthIn
 import io.github.pauverblom.cronicas.ui.plataforma.anchoVentanaDp
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -64,9 +65,10 @@ private val EntreVentanas = 30.dp
 /** Columna desplazable en móvil; dos columnas a partir de 700 dp. */
 @Composable
 fun ColumnasHoja(izquierda: @Composable ColumnScope.() -> Unit, derecha: @Composable ColumnScope.() -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         if (maxWidth >= 700.dp) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+            // En monitores muy anchos las columnas no se estiran más allá de 1400 dp entre las dos
+            Row(Modifier.widthIn(max = 1400.dp).fillMaxSize().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
                 Column(
                     Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(top = 22.dp, bottom = 48.dp).navigationBarsPadding(),
                     verticalArrangement = Arrangement.spacedBy(EntreVentanas)

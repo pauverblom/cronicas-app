@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import io.github.pauverblom.cronicas.rules.Atributo
+import io.github.pauverblom.cronicas.ui.plataforma.anchoVentanaDp
 import io.github.pauverblom.cronicas.ui.theme.AlegreyaSans
 import io.github.pauverblom.cronicas.ui.theme.Cinzel
 import io.github.pauverblom.cronicas.ui.theme.ColoresFijos
@@ -323,7 +325,10 @@ fun Insignia(
     val interaccion = remember { MutableInteractionSource() }
     BoxWithConstraints(
         modifier
-            .widthIn(max = 84.dp)
+            // Con weight en una fila ancha (tablet, ordenador) la insignia no crece: conserva su tamaño, centrada
+            .wrapContentWidth()
+            // En tablet y ordenador, algo más grande (y todo su contenido a escala)
+            .widthIn(max = if (anchoVentanaDp() >= 700) 116.dp else 84.dp)
             .aspectRatio(84f / 108f)
             .capa(lado = 4.dp, arriba = 4.dp, abajo = 4.dp)
             .then(if (onClick != null) Modifier.foco(interaccion).clickable(interaccion, null, role = Role.Button, onClick = onClick) else Modifier)
@@ -338,15 +343,17 @@ fun Insignia(
         // Se colocan por la línea base, no por la caja del texto, que cambia con las métricas de la fuente
         // de cada plataforma
         val u = maxHeight / 108f
+        // Escala respecto al tamaño de diseño (84 dp de ancho), para que el texto crezca con el marco
+        val e = (u / 1.dp).coerceAtLeast(1f)
         Row(Modifier.align(Alignment.TopCenter).padding(top = u * 13).height(u * 16), verticalAlignment = Alignment.CenterVertically) {
-            Text(etiqueta, style = Tipos.etiquetaCaps, color = c.oro, maxLines = 1)
-            if (fijado) MarcaFijada(12.dp, Modifier.offset(y = 4.dp))
+            Text(etiqueta, style = Tipos.etiquetaCaps.let { it.copy(fontSize = it.fontSize * e) }, color = c.oro, maxLines = 1)
+            if (fijado) MarcaFijada(12.dp * e, Modifier.offset(y = 4.dp * e))
         }
         Text(
             valor,
             style = Tipos.cifraLg.copy(
-                fontSize = if (valor.length > 4) 19.sp else 27.sp,
-                lineHeight = 36.sp,
+                fontSize = (if (valor.length > 4) 19.sp else 27.sp) * e,
+                lineHeight = 36.sp * e,
                 letterSpacing = (-0.01).em,
                 shadow = brillo(c.metalBajo, 24f)
             ),
@@ -356,7 +363,7 @@ fun Insignia(
         )
         if (sub != null) {
             Text(
-                sub, style = Tipos.caption.copy(fontSize = 11.sp, lineHeight = 14.sp), color = c.tintaSuave, maxLines = 1,
+                sub, style = Tipos.caption.copy(fontSize = 11.sp * e, lineHeight = 14.sp * e), color = c.tintaSuave, maxLines = 1,
                 textAlign = TextAlign.Center, modifier = Modifier.align(Alignment.TopCenter).paddingFromBaseline(top = u * 85)
             )
         }
@@ -386,6 +393,7 @@ fun EscudoCaracteristica(
     val interaccion = remember { MutableInteractionSource() }
     Box(
         modifier
+            .wrapContentWidth()
             .widthIn(max = 96.dp)
             .aspectRatio(96f / 120f)
             .then(if (onClick != null) Modifier.foco(interaccion).clickable(interaccion, null, role = Role.Button, onClick = onClick) else Modifier)

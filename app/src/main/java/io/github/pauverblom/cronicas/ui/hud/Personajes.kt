@@ -1,5 +1,8 @@
 package io.github.pauverblom.cronicas.ui.hud
 
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.sharp.MoreVert
+import androidx.compose.material.icons.Icons
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
@@ -132,11 +135,13 @@ fun EntradaLista(
     llama: Llama,
     onClick: () -> Unit,
     onClickLargo: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** Los tres puntos que abren el menú de la entrada (el mismo que mantener pulsado). */
+    onMenu: (() -> Unit)? = null
 ) {
     val c = Marca.colores
     Placa(modifier.fillMaxWidth(), pintura = Pintura.Metal, onClick = onClick, onClickLargo = onClickLargo) {
-        Row(Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(Modifier.padding(start = 24.dp, end = if (onMenu != null) 8.dp else 24.dp, top = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Retrato(retrato, nombre, llama, 56.dp)
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(nombre, style = TextStyle(fontFamily = Cinzel, fontSize = 19.sp, lineHeight = 24.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.03.em), color = c.tinta, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -148,6 +153,9 @@ fun EntradaLista(
                         Text("PG $pg/$pgMax", style = TextStyle(fontFamily = Cinzel, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.06.em), color = color, maxLines = 1)
                     }
                 }
+            }
+            if (onMenu != null) {
+                BotonIcono(onMenu, "Más acciones") { Icon(Icons.Sharp.MoreVert, null, Modifier.size(24.dp)) }
             }
         }
     }

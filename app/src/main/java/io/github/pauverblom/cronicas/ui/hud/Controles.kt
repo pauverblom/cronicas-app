@@ -141,7 +141,9 @@ fun Boton(
     bloque: Boolean = false,
     brillo: Boolean = false,
     descripcion: String? = null,
-    compacto: Boolean = false
+    compacto: Boolean = false,
+    /** Margen a cada lado del texto en los botones con marco (menos para que quepan dos en una fila). */
+    margen: Dp = 36.dp
 ) {
     val c = Marca.colores
     val interaccion = remember { MutableInteractionSource() }
@@ -183,7 +185,7 @@ fun Boton(
                 interior(c, forma, relleno)
                 if (enmarcado) marco(Orn.PLACA, (if (activo) Pintura.Metal else Pintura.Hierro).brocha(c), density)
             }
-            .padding(horizontal = if (enmarcado) 36.dp else 12.dp),
+            .padding(horizontal = if (enmarcado) margen else 12.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically
     ) {

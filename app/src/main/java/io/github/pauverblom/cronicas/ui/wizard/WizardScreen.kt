@@ -1,5 +1,7 @@
 package io.github.pauverblom.cronicas.ui.wizard
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.widthIn
 import io.github.pauverblom.cronicas.ui.plataforma.Archivo
 import io.github.pauverblom.cronicas.ui.plataforma.ManejarAtras
 import io.github.pauverblom.cronicas.ui.plataforma.modeloArchivo
@@ -164,6 +166,9 @@ data class WizardState(
 
 internal val TITULOS = listOf("Nombre y retrato", "Especie", "Clase", "Características", "Puntos de golpe", "Trasfondo", "Oro inicial")
 
+/** Ancho máximo del asistente en pantallas grandes. */
+private val AnchoAsistente = 720.dp
+
 @Composable
 fun WizardScreen(onCancelar: () -> Unit, onCreado: (Long) -> Unit, vm: WizardViewModel = viewModel()) {
     val s by vm.state.collectAsState()
@@ -177,7 +182,11 @@ fun WizardScreen(onCancelar: () -> Unit, onCreado: (Long) -> Unit, vm: WizardVie
         Cabecera(navegacion = {
             BotonIcono(onCancelar, "Cancelar") { Icon(Icons.Sharp.Close, null, Modifier.size(24.dp)) }
         }) { TituloPantalla("Nuevo personaje") }
-        MechaPasos(s.paso + 1, TITULOS.size, TITULOS[s.paso], llama, Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp))
+        // En tablet y ordenador el asistente no pasa de [AnchoAsistente], centrado
+        MechaPasos(
+            s.paso + 1, TITULOS.size, TITULOS[s.paso], llama,
+            Modifier.align(Alignment.CenterHorizontally).widthIn(max = AnchoAsistente).padding(horizontal = 16.dp).padding(bottom = 8.dp)
+        )
         Box(Modifier.weight(1f).fillMaxWidth()) {
             Brasas(llama, Modifier.matchParentSize(), densidad = 0.5f)
             // Avanzar entra por la derecha y retroceder por la izquierda; cada paso empieza arriba del todo
@@ -191,52 +200,62 @@ fun WizardScreen(onCancelar: () -> Unit, onCreado: (Long) -> Unit, vm: WizardVie
                 },
                 label = "paso"
             ) { paso ->
-                Column(
-                    Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    when (paso) {
-                        0 -> PasoNombre(s, vm, llama)
-                        1 -> PasoEspecie(s, vm)
-                        2 -> PasoClase(s, vm)
-                        3 -> PasoCaracteristicas(s, vm)
-                        4 -> PasoPg(s, vm)
-                        5 -> PasoTrasfondo(s, vm)
-                        6 -> PasoOro(s, vm)
+                Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), contentAlignment = Alignment.TopCenter) {
+                    Column(
+                        Modifier
+                                // Los pasos con carrusel, a todo el ancho: se ven las tarjetas vecinas
+                            .widthIn(max = if (paso == 1 || paso == 2) Dp.Infinity else AnchoAsistente)
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        when (paso) {
+                            0 -> PasoNombre(s, vm, llama)
+                            1 -> PasoEspecie(s, vm)
+                            2 -> PasoClase(s, vm)
+                            3 -> PasoCaracteristicas(s, vm)
+                            4 -> PasoPg(s, vm)
+                            5 -> PasoTrasfondo(s, vm)
+                            6 -> PasoOro(s, vm)
+                        }
                     }
                 }
             }
         }
-        Row(
+        Box(
             Modifier
                 .fillMaxWidth()
                 .background(Brush.verticalGradient(listOf(Color.Transparent, c.vitela100)))
                 .navigationBarsPadding()
-                .imePadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .imePadding(),
+            contentAlignment = Alignment.Center
         ) {
-            if (s.paso > 0) Boton("Atrás", vm::anterior)
-            Spacer(Modifier.weight(1f))
-            if (s.paso < TITULOS.lastIndex) {
-                Boton("Siguiente", vm::siguiente, variante = Variante.DORADO, activo = s.pasoValido())
-            } else {
-                Boton(
-                    "Crear personaje",
-                    {
-                        if (animado) {
-                            forja = Forja()
-                            vm.crear { id -> forja = forja?.copy(id = id) }
-                        } else {
-                            vm.crear(onCreado)
-                        }
-                    },
-                    variante = Variante.DORADO,
-                    activo = !s.creando
-                )
+            Row(
+                Modifier
+                    .widthIn(max = AnchoAsistente)
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (s.paso > 0) Boton("Atrás", vm::anterior)
+                Spacer(Modifier.weight(1f))
+                if (s.paso < TITULOS.lastIndex) {
+                    Boton("Siguiente", vm::siguiente, variante = Variante.DORADO, activo = s.pasoValido())
+                } else {
+                    Boton(
+                        "Crear personaje",
+                        {
+                            if (animado) {
+                                forja = Forja()
+                                vm.crear { id -> forja = forja?.copy(id = id) }
+                            } else {
+                                vm.crear(onCreado)
+                            }
+                        },
+                        variante = Variante.DORADO,
+                        activo = !s.creando
+                    )
+                }
             }
         }
     }
@@ -336,7 +355,10 @@ private fun FinaleForja(nombre: String, retrato: Archivo?, llama: Llama, listo: 
 /** Texto de instrucciones de un paso del asistente. */
 @Composable
 private fun Instruccion(texto: String) {
-    Text(texto, style = Tipos.cuerpo, color = Marca.colores.tinta)
+    // Alineada con la columna del asistente también en los pasos con carrusel, que van a todo el ancho
+    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
+        Text(texto, style = Tipos.cuerpo, color = Marca.colores.tinta, modifier = Modifier.widthIn(max = AnchoAsistente - 32.dp).fillMaxWidth())
+    }
 }
 
 @Composable

@@ -1,5 +1,15 @@
 package io.github.pauverblom.cronicas.ui.common
 
+import io.github.pauverblom.cronicas.ui.plataforma.anchoVentanaDp
+import kotlinx.coroutines.launch
+import io.github.pauverblom.cronicas.ui.hud.BotonIcono
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material3.Icon
+import androidx.compose.material.icons.sharp.ChevronRight
+import androidx.compose.material.icons.sharp.ChevronLeft
+import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -104,8 +114,25 @@ fun <T> Carrusel(
                 layout(colocable.width, colocable.height) { colocable.place(0, 0) }
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center) {
+        // En pantallas anchas, flechas junto al contador: con ratón no se puede deslizar
+        val flechas = anchoVentanaDp() >= 600
+        val scope = rememberCoroutineScope()
+        Row(
+            Modifier.fillMaxWidth().padding(top = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (flechas) {
+                BotonIcono({ scope.launch { estado.animateScrollToPage(estado.currentPage - 1) } }, "Anterior", activo = estado.currentPage > 0) {
+                    Icon(Icons.Sharp.ChevronLeft, null, Modifier.size(28.dp))
+                }
+            }
             Text("${estado.currentPage + 1} / ${elementos.size}", style = Tipos.etiquetaCaps, color = c.tintaSuave)
+            if (flechas) {
+                BotonIcono({ scope.launch { estado.animateScrollToPage(estado.currentPage + 1) } }, "Siguiente", activo = estado.currentPage < elementos.lastIndex) {
+                    Icon(Icons.Sharp.ChevronRight, null, Modifier.size(28.dp))
+                }
+            }
         }
     }
 }

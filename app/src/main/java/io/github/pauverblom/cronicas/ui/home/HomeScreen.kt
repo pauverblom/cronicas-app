@@ -1,5 +1,7 @@
 package io.github.pauverblom.cronicas.ui.home
 
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.BoxWithConstraints
 import io.github.pauverblom.cronicas.ui.plataforma.modeloRetrato
 import io.github.pauverblom.cronicas.ui.plataforma.rememberAbrirArchivo
 import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
@@ -103,9 +105,6 @@ fun HomeScreen(
     Column(Modifier.fillMaxSize()) {
         Cabecera(
             acciones = {
-                if (vm.syncDisponible) {
-                    BotonIcono({ vinculando = true }, "Vincular personaje") { Icon(Icons.Sharp.Sync, null, Modifier.size(24.dp)) }
-                }
                 BotonIcono(importar, "Importar personaje") { Icon(Icons.Sharp.FileOpen, null, Modifier.size(24.dp)) }
                 BotonIcono(onAjustes, "Ajustes") { Icon(Icons.Sharp.Settings, null, Modifier.size(24.dp)) }
             }
@@ -116,11 +115,27 @@ fun HomeScreen(
             lista == null || datos == null -> Cargando()
             lista.isEmpty() -> SinPersonajes(onNuevo, importar, if (vm.syncDisponible) ({ vinculando = true }) else null)
             else -> {
-                Boton(
-                    "Nuevo personaje", onNuevo,
-                    Modifier.padding(horizontal = 16.dp, vertical = 8.dp).widthIn(max = 420.dp).align(Alignment.CenterHorizontally),
-                    variante = Variante.DORADO, icono = Glifo.MAS, bloque = true
-                )
+                // Crear un personaje o traer uno que otro dispositivo comparte con su código. Uno al lado del otro;
+                // en pantallas muy estrechas, uno debajo del otro para que no se corte el texto
+                BoxWithConstraints(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).widthIn(max = 560.dp).align(Alignment.CenterHorizontally)) {
+                    val nuevo = @Composable { m: Modifier, margen: Dp ->
+                        Boton("Nuevo personaje", onNuevo, m, variante = Variante.DORADO, icono = Glifo.MAS, bloque = true, margen = margen)
+                    }
+                    val vincular = @Composable { m: Modifier, margen: Dp ->
+                        Boton("Vincular", { vinculando = true }, m, descripcion = "Vincular un personaje con su código", margen = margen)
+                    }
+                    when {
+                        !vm.syncDisponible -> nuevo(Modifier, 36.dp)
+                        maxWidth >= 368.dp -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            nuevo(Modifier.weight(1f), 24.dp)
+                            vincular(Modifier, 24.dp)
+                        }
+                        else -> Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            nuevo(Modifier, 36.dp)
+                            vincular(Modifier.fillMaxWidth(), 36.dp)
+                        }
+                    }
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(340.dp),
                     modifier = Modifier.fillMaxSize(),
@@ -464,15 +479,19 @@ private fun FilaPersonaje(
             pgMax = r.estado?.pgMaximos,
             llama = llamaDe(p.claseId),
             onClick = onClick,
-            onClickLargo = { menu = true }
+            onClickLargo = { menu = true },
+            onMenu = { menu = true }
         )
-        MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
-            if (onSincronizar != null) {
-                DropdownMenuItem(text = { Text("Sincronizar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onSincronizar() })
+        // El menú sale junto a los tres puntos, en la esquina de la tarjeta
+        Box(Modifier.align(Alignment.TopEnd).padding(top = 48.dp, end = 16.dp)) {
+            MenuHud(expanded = menu, onDismissRequest = { menu = false }) {
+                if (onSincronizar != null) {
+                    DropdownMenuItem(text = { Text("Sincronizar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onSincronizar() })
+                }
+                DropdownMenuItem(text = { Text("Mover a campaña…", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onMover() })
+                DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onExportar() })
+                DropdownMenuItem(text = { Text("Eliminar", style = Tipos.ui, color = c.sangre) }, onClick = { menu = false; onEliminar() })
             }
-            DropdownMenuItem(text = { Text("Mover a campaña…", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onMover() })
-            DropdownMenuItem(text = { Text("Exportar", style = Tipos.ui, color = c.tinta) }, onClick = { menu = false; onExportar() })
-            DropdownMenuItem(text = { Text("Eliminar", style = Tipos.ui, color = c.sangre) }, onClick = { menu = false; onEliminar() })
         }
     }
 }

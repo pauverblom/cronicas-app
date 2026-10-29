@@ -1,5 +1,6 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import io.github.pauverblom.cronicas.ui.plataforma.anchoVentanaDp
 import io.github.pauverblom.cronicas.ui.plataforma.rememberAviso
 import io.github.pauverblom.cronicas.ui.plataforma.rememberAbrirArchivo
 import androidx.compose.foundation.clickable
@@ -65,9 +66,11 @@ fun MagiaTab(ui: HojaUi, vm: HojaViewModel) {
     val catalogo by vm.catalogoConjuros.collectAsState()
     val buscador = rememberBuscador(ui, vm)
 
+    // En pantallas anchas la lista no pasa de 820 dp, centrada (se puede desplazar desde cualquier parte)
+    val lado = ((anchoVentanaDp() - 820) / 2).coerceAtLeast(16).dp
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 22.dp, bottom = 48.dp),
+        contentPadding = PaddingValues(start = lado, end = lado, top = 22.dp, bottom = 48.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item(key = "espacios") {
