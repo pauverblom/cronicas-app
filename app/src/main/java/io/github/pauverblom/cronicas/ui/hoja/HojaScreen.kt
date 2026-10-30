@@ -1,5 +1,9 @@
 package io.github.pauverblom.cronicas.ui.hoja
 
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.foundation.pager.PagerScope
+import androidx.compose.ui.graphics.graphicsLayer
 import io.github.pauverblom.cronicas.ui.hud.rememberEntradaTerminada
 import io.github.pauverblom.cronicas.ui.common.animacionesActivas
 import kotlinx.coroutines.delay
@@ -152,11 +156,38 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, ajustes: AjustesApp, o
             Cargando()
             return@Column
         }
-        // La pestaña vecina se compone un momento después, en reposo, no a la vez que la primera
+        // Las demás pestañas se componen de una en una, en reposo, después de la primera. Así deslizar entre
+        // pestañas nunca tiene que construir una (antes la siguiente se construía justo al terminar el deslizamiento)
         var vecinas by remember { mutableIntStateOf(0) }
-        LaunchedEffect(Unit) {
-            delay(600)
-            vecinas = 1
+        LaunchedEffect(pestanas.size) {
+            while (vecinas < pestanas.size - 1) {
+                delay(if (vecinas == 0) 600 else 250)
+                vecinas++
+            }
+        }
+        // El contenido de cada pestaña, creado una sola vez: si se rehiciera en cada recomposición de la ficha (al
+        // cambiar el número de pestañas compuestas, por ejemplo), el pager volvería a componer todas las pestañas.
+        // Por lo mismo, cada pestaña sabe si es la visible con un estado propio, que solo leen sus animaciones
+        val uiActual = rememberUpdatedState(ui)
+        val pagina: @Composable PagerScope.(Int) -> Unit = remember(pestanas, pager, vm) {
+            { page ->
+                val visible = remember(page) { derivedStateOf { pager.settledPage == page } }
+                // Cada pestaña en su propia capa: al deslizar solo se mueve lo ya dibujado, sin volver a dibujar
+                // en cada fotograma todos sus marcos y adornos
+                Box(Modifier.fillMaxSize().graphicsLayer()) {
+                    CompositionLocalProvider(LocalAnimacionesVisibles provides visible) {
+                        uiActual.value?.let { u ->
+                            when (pestanas[page]) {
+                                Pestana.RESUMEN -> ResumenTab(u, vm)
+                                Pestana.PERSONAJE -> PersonajeTab(u, vm)
+                                Pestana.EQUIPO -> EquipoTab(u, vm)
+                                Pestana.MAGIA -> MagiaTab(u, vm)
+                                Pestana.NOTAS -> NotasTab(u, vm)
+                            }
+                        }
+                    }
+                }
+            }
         }
         AnimatedVisibility(
             remember { MutableTransitionState(false) }.apply { targetState = true },
@@ -170,18 +201,7 @@ private fun HojaContenido(ui: HojaUi?, vm: HojaViewModel, ajustes: AjustesApp, o
                     onElegir = { i -> scope.launch { pager.animateScrollToPage(i) } }
                 )
                 Box(Modifier.weight(1f)) {
-                    HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = vecinas) { page ->
-                        // Las pestañas vecinas siguen compuestas para deslizar sin esperas, pero con sus animaciones quietas
-                        CompositionLocalProvider(LocalAnimacionesVisibles provides (page == pager.settledPage)) {
-                            when (pestanas[page]) {
-                                Pestana.RESUMEN -> ResumenTab(ui, vm)
-                                Pestana.PERSONAJE -> PersonajeTab(ui, vm)
-                                Pestana.EQUIPO -> EquipoTab(ui, vm)
-                                Pestana.MAGIA -> MagiaTab(ui, vm)
-                                Pestana.NOTAS -> NotasTab(ui, vm)
-                            }
-                        }
-                    }
+                    HorizontalPager(state = pager, modifier = Modifier.fillMaxSize(), beyondViewportPageCount = vecinas, pageContent = pagina)
                     // Sombra bajo el raíl: lo que sube se funde con la noche al pasar por debajo de las pestañas
                     Spacer(
                         Modifier

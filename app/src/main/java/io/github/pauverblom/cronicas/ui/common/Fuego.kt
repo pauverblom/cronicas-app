@@ -1,5 +1,8 @@
 package io.github.pauverblom.cronicas.ui.common
 
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.State
 import kotlin.math.pow
 import io.github.pauverblom.cronicas.ui.plataforma.animacionesDelSistema
 import androidx.compose.animation.animateColorAsState
@@ -12,7 +15,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
@@ -69,9 +71,13 @@ fun animarLlama(llama: Llama): Llama {
 
 /**
  * Falso en lo que no se ve aunque esté compuesto (las pestañas vecinas del pager): ahí las animaciones continuas
- * se quedan quietas para no pintar fotogramas que nadie mira.
+ * se quedan quietas para no pintar fotogramas que nadie mira. Es un estado, no un valor: cada pestaña da siempre el
+ * mismo objeto, y al terminar de deslizar solo cambia lo que hay dentro, así que solo se actualizan las animaciones
+ * que lo leen y no las pestañas enteras.
  */
-val LocalAnimacionesVisibles = staticCompositionLocalOf { true }
+val LocalAnimacionesVisibles = staticCompositionLocalOf<State<Boolean>> { SiempreVisible }
+
+private val SiempreVisible: State<Boolean> = mutableStateOf(true)
 
 /**
  * Falso si el usuario ha quitado las animaciones del sistema (escala de animación 0): entonces no hay partículas.
@@ -80,7 +86,7 @@ val LocalAnimacionesVisibles = staticCompositionLocalOf { true }
 @Composable
 fun animacionesActivas(): Boolean {
     val sistema = animacionesDelSistema()
-    return sistema && LocalAnimacionesVisibles.current
+    return sistema && LocalAnimacionesVisibles.current.value
 }
 
 // ── Partículas ──
