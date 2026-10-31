@@ -451,7 +451,18 @@ fun Gema(color: Color, tamano: Dp, modifier: Modifier = Modifier) {
 
 /** Una fila de «Salvaciones y tiradas»: la gema en su engaste, la abreviatura, el bonificador y el ND en una placa. */
 @Composable
-fun FilaSalvacion(atributo: Atributo, bonus: Int, nd: Int, primaria: Boolean, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+fun FilaSalvacion(
+    atributo: Atributo,
+    bonus: Int,
+    nd: Int,
+    primaria: Boolean,
+    modifier: Modifier = Modifier,
+    /** Rebajada por algo pasajero (la carga): la cifra va en color de aviso. */
+    penalizada: Boolean = false,
+    /** Falla siempre (sobrecargado): en vez de la cifra, una raya. */
+    falla: Boolean = false,
+    onClick: (() -> Unit)? = null
+) {
     val c = Marca.colores
     val ab = c.atributo(atributo)
     val pintura = if (primaria) Pintura.Metal else Pintura.Hierro
@@ -491,9 +502,9 @@ fun FilaSalvacion(atributo: Atributo, bonus: Int, nd: Int, primaria: Boolean, mo
                 if (primaria) IconoGlifo(Glifo.ESTRELLA, tamano = 12.dp, color = c.oro, descripcion = "Primaria")
             }
             Text(
-                conSigno(bonus),
+                if (falla) "—" else conSigno(bonus),
                 style = Tipos.cifraMd.copy(fontSize = 19.sp, lineHeight = 24.sp, shadow = brillo(c.metalBajo, 20f)),
-                color = c.tinta,
+                color = if (falla || penalizada) c.alerta else c.tinta,
                 textAlign = TextAlign.End,
                 modifier = Modifier.width(36.dp)
             )
@@ -573,8 +584,9 @@ private fun Hueco(ancho: Dp, pintura: Pintura, contenido: @Composable () -> Unit
 
 // ── Experiencia (XPBar) ──
 
+/** Barra de PX de [desde] a [siguiente], los PX de [nivel] (el que se quiere alcanzar); [nota] va debajo. */
 @Composable
-fun BarraPx(px: Int, desde: Int, siguiente: Int?, nivel: Int, modifier: Modifier = Modifier) {
+fun BarraPx(px: Int, desde: Int, siguiente: Int?, nivel: Int, modifier: Modifier = Modifier, nota: String? = null) {
     val c = Marca.colores
     val pct = siguiente?.let { if (it > desde) (px - desde).toFloat() / (it - desde) else 1f } ?: 1f
     val listo = siguiente != null && px >= siguiente
@@ -582,13 +594,14 @@ fun BarraPx(px: Int, desde: Int, siguiente: Int?, nivel: Int, modifier: Modifier
         Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(miles(px), style = Tipos.cifraLg.copy(fontSize = 32.sp), color = c.tinta)
             Text(
-                siguiente?.let { "/ ${miles(it)} PX para nivel ${nivel + 1}" } ?: "PX",
+                siguiente?.let { "/ ${miles(it)} PX para nivel $nivel" } ?: "PX",
                 style = Tipos.uiSm, color = c.tintaSuave, modifier = Modifier.padding(bottom = 6.dp)
             )
         }
         Box(Modifier.drawBehind { if (listo) halo(Path().apply { addRect(Rect(Offset(16.dp.toPx(), 0f), Size(size.width - 32.dp.toPx(), size.height))) }, c.metalMedio.copy(alpha = 0.6f), 8.dp.toPx()) }) {
             Medidor(pct, brochaMetal(), descripcion = "Experiencia")
         }
+        if (nota != null) Text(nota, style = Tipos.cuerpoSm, color = c.alerta)
         if (listo) {
             Text(
                 "¡Tienes PX suficientes para subir de nivel!",

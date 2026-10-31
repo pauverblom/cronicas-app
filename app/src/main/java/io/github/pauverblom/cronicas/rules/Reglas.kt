@@ -58,6 +58,9 @@ object Carga {
 
     enum class Banda(val etiqueta: String) { LIGERA("Ligera"), MEDIA("Media"), SOBRECARGADO("Sobrecargado") }
 
+    /** Carga media: -2 a las tiradas de Destreza. */
+    const val PENALIZACION_DES_MEDIA = -2
+
     /** Límite de carga: puntuación de FUE, +3 si FUE es primaria, +3 si CON es primaria. */
     fun limite(fue: Int, fuePrimaria: Boolean, conPrimaria: Boolean): Int =
         fue + (if (fuePrimaria) 3 else 0) + (if (conPrimaria) 3 else 0)

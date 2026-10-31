@@ -149,7 +149,17 @@ private fun BloqueExperiencia(ui: HojaUi, onAnadir: () -> Unit, onSubir: () -> U
     val h = ui.hoja
     Ventana("Experiencia") {
         val desde = h.clase?.let { Progresion.xpParaNivel(it, h.secundaria, h.nivel) } ?: 0
-        BarraPx(p.experiencia, desde, h.xpSiguiente, h.nivel)
+        if (h.clase != null && p.experiencia < desde) {
+            // Nivel puesto a mano por encima de sus PX: la barra va hacia los PX del nivel que tiene
+            val anterior = Progresion.xpParaNivel(h.clase, h.secundaria, h.nivel - 1)
+            BarraPx(
+                p.experiencia, anterior, desde, h.nivel,
+                nota = "Con ${miles(p.experiencia)} PX corresponde el nivel ${Progresion.nivelPorXp(h.clase, h.secundaria, p.experiencia)}: " +
+                    "faltan ${miles(desde - p.experiencia)} PX para el nivel ${h.nivel}."
+            )
+        } else {
+            BarraPx(p.experiencia, desde, h.xpSiguiente, h.nivel + 1)
+        }
         Column(Modifier.fillMaxWidth().padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Cuando hay PX suficientes, «Subir de nivel» es la llamada a la acción y late
             Boton("Subir de nivel", onSubir, variante = if (h.puedeSubir) Variante.DORADO else Variante.FANTASMA, brillo = h.puedeSubir, bloque = true)

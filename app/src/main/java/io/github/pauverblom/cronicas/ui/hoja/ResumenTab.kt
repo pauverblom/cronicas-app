@@ -262,7 +262,12 @@ private fun BloqueSalvaciones(caracts: List<CaracteristicaHoja>) {
             modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
         )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            caracts.forEach { car -> FilaSalvacion(car.atributo, car.bonusTirada, car.nd, car.primaria, onClick = { detalle = car }) }
+            caracts.forEach { car ->
+                FilaSalvacion(
+                    car.atributo, car.bonusTirada, car.nd, car.primaria,
+                    penalizada = car.penalizacionCarga != 0, falla = car.falloAutomatico, onClick = { detalle = car }
+                )
+            }
         }
     }
     detalle?.let { car ->
@@ -271,7 +276,12 @@ private fun BloqueSalvaciones(caracts: List<CaracteristicaHoja>) {
             onDismiss = { detalle = null },
             acciones = { Boton("Cerrar", { detalle = null }, variante = Variante.DISCRETO) }
         ) {
-            Text("1d20 ${signo(car.mod)} (mod.) ${signo(car.bonusTirada - car.mod)} (nivel) contra ND ${car.nd}" + if (car.primaria) " (primaria)" else " (secundaria)")
+            val nivel = car.bonusTirada - car.mod - car.penalizacionCarga
+            val carga = if (car.penalizacionCarga != 0) " ${signo(car.penalizacionCarga)} (carga media)" else ""
+            Text("1d20 ${signo(car.mod)} (mod.) ${signo(nivel)} (nivel)$carga contra ND ${car.nd}" + if (car.primaria) " (primaria)" else " (secundaria)")
+            if (car.falloAutomatico) {
+                Text("Sobrecargado: las tiradas de ${car.atributo.nombre} fallan automáticamente.", style = Tipos.cuerpoSm, color = Marca.colores.alerta)
+            }
             Subtitulo("Salvaciones contra:")
             FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Salvaciones.amenazas[car.atributo].orEmpty().forEach { t -> Etiqueta(t) }

@@ -23,9 +23,13 @@ data class CaracteristicaHoja(
     val mod: Int,
     val modForzado: Boolean,
     val primaria: Boolean,
-    /** Bonificador a tiradas de característica y salvación: mod. + nivel. */
+    /** Bonificador a tiradas de característica y salvación: mod. + nivel + [penalizacionCarga]. */
     val bonusTirada: Int,
-    val nd: Int
+    val nd: Int,
+    /** Lo que resta la carga (p. 48): -2 a Destreza con carga media. */
+    val penalizacionCarga: Int = 0,
+    /** Sobrecargado: las tiradas de Destreza fallan automáticamente. */
+    val falloAutomatico: Boolean = false
 )
 
 data class DesgloseCa(
@@ -161,6 +165,15 @@ object Hoja {
             .groupBy { it.companiaId!! }
             .mapValues { (_, l) -> l.sumOf { (it.cantidad * it.ve).toDouble() }.toFloat() }
         val carga = CargaHoja(limite, totalVe, veMonedas, banda, usoContenedores, usoCompanias)
+        // La carga afecta a las tiradas de Destreza (también las salvaciones): -2 con carga media, fallo sobrecargado
+        val caracteristicas = caracts.map { car ->
+            if (car.atributo != Atributo.DES) car
+            else when (banda) {
+                Carga.Banda.LIGERA -> car
+                Carga.Banda.MEDIA -> car.copy(bonusTirada = car.bonusTirada + Carga.PENALIZACION_DES_MEDIA, penalizacionCarga = Carga.PENALIZACION_DES_MEDIA)
+                Carga.Banda.SOBRECARGADO -> car.copy(falloAutomatico = true)
+            }
+        }
 
         // ── Clase de armadura ──
         val llevados = objetos.filter { it.companiaId == null }
@@ -294,7 +307,7 @@ object Hoja {
             nombreEspecie = especie?.nombre ?: p.especieNombre.ifBlank { "Sin especie" },
             nivel = nivel,
             nivelSecundario = nivelSec,
-            caracteristicas = caracts,
+            caracteristicas = caracteristicas,
             dado = e.dgOverride ?: dadoCalculado,
             dadoForzado = e.dgOverride != null,
             ba = ba,

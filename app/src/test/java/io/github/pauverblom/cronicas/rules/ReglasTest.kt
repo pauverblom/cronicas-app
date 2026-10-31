@@ -193,6 +193,23 @@ class HojaTest {
     }
 
     @Test
+    fun cargaPenalizaLasTiradasDeDestreza() {
+        // FUE 10 sin primarias: límite 10 VE. 150 monedas = 1 VE
+        val c = caract(fue = 10, des = 13)
+        val ligera = Hoja.calcular(personaje("guerrero", nivel = 4), c, Estado(1))
+        assertEquals(1 + 4, ligera.car(Atributo.DES).bonusTirada)
+        val media = Hoja.calcular(personaje("guerrero", nivel = 4), c, Estado(1), tesoro = Tesoro(1, oro = 3000))
+        assertEquals(Carga.Banda.MEDIA, media.carga.banda)
+        assertEquals(1 + 4 - 2, media.car(Atributo.DES).bonusTirada)
+        assertEquals(-2, media.car(Atributo.DES).penalizacionCarga)
+        // Las demás características no cambian
+        assertEquals(ligera.car(Atributo.FUE).bonusTirada, media.car(Atributo.FUE).bonusTirada)
+        val sobrecargado = Hoja.calcular(personaje("guerrero", nivel = 4), c, Estado(1), tesoro = Tesoro(1, oro = 7500))
+        assertEquals(Carga.Banda.SOBRECARGADO, sobrecargado.carga.banda)
+        assertTrue(sobrecargado.car(Atributo.DES).falloAutomatico)
+    }
+
+    @Test
     fun caConArmaduraEscudoYDes() {
         val objetos = listOf(objeto("cota_mallas", equipado = true), objeto("escudo_medio_metal", equipado = true), objeto("yelmo", equipado = true))
         val h = Hoja.calcular(personaje("guerrero"), caract(des = 13), Estado(1), objetos)
